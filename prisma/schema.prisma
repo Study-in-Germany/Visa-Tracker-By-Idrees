@@ -1,0 +1,110 @@
+// Visa Tracker by Idrees — database schema
+// Deploy target: any serverless Postgres (Neon / Supabase / Vercel Postgres) via DATABASE_URL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ApprovalState {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum VisaStatus {
+  WAITING_LIST
+  WAITING_FOR_SUBMISSION
+  SUBMISSION_RECEIVED
+  UNDER_CORRECTION
+  APPOINTMENT_SCHEDULED
+  PROCESSING
+  VISA_ISSUED
+  VISA_REJECTED
+  WITHDRAWN
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+model Applicant {
+  id                String        @id @default(cuid())
+  publicId          String        @unique
+  accessCodeHash    String        // hashed access code, paired with publicId for applicant self-login
+
+  name              String
+  email             String?
+  gender            Gender?
+  city              String?
+  province          String?
+  university        String?
+  program           String?
+  intake            String?
+  visaType          String?
+  consulate         String        @default("Islamabad")
+  waitingListCategory String?
+  sourceOfInformation String?
+  additionalDocuments String?
+  notes             String?
+
+  waitingListDate         DateTime?
+  submissionInviteDate    DateTime?
+  documentSubmissionDate  DateTime?
+  correctionRequestDate   DateTime?
+  correctionSubmittedDate DateTime?
+  appointmentDate         DateTime?
+  interviewDate           DateTime?
+  decisionDate            DateTime?
+
+  visaStatus        VisaStatus    @default(WAITING_LIST)
+  approval          ApprovalState @default(PENDING_REVIEW)
+  isAnonymous       Boolean       @default(true)
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  history           StatusEvent[]
+
+  @@index([approval])
+  @@index([visaStatus])
+  @@index([university])
+  @@index([consulate])
+}
+
+model StatusEvent {
+  id          String     @id @default(cuid())
+  applicant   Applicant  @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  applicantId String
+  visaStatus  VisaStatus
+  note        String?
+  occurredAt  DateTime   @default(now())
+
+  @@index([applicantId])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  consulate String?
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
