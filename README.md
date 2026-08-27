@@ -3,7 +3,7 @@
 A community-driven tracker for Pakistani students following the German national
 student visa process — built with Next.js, Prisma, and Postgres, deployable
 free on Vercel.
-
+ 
 ## Features
 
 - **Public tracker** — search by Tracking ID, browse/filter all approved entries
