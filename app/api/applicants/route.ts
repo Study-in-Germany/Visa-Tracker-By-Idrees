@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   const consulate = searchParams.get("consulate") || undefined;
   const q = searchParams.get("q") || undefined;
   const approvalParam = searchParams.get("approval") || undefined;
+  const month = searchParams.get("month") || undefined; // format: YYYY-MM, filters by waiting-list join month
 
   const where: any = {};
 
@@ -27,6 +28,16 @@ export async function GET(req: NextRequest) {
   if (university) where.university = { contains: university, mode: "insensitive" };
   if (consulate) where.consulate = consulate;
   if (visaStatus) where.visaStatus = visaStatus;
+  if (month) {
+    const [yearStr, monthStr] = month.split("-");
+    const year = parseInt(yearStr, 10);
+    const monthIdx = parseInt(monthStr, 10) - 1;
+    if (!isNaN(year) && !isNaN(monthIdx)) {
+      const start = new Date(Date.UTC(year, monthIdx, 1));
+      const end = new Date(Date.UTC(year, monthIdx + 1, 1));
+      where.waitingListDate = { gte: start, lt: end };
+    }
+  }
   if (q) {
     where.OR = [
       { publicId: { contains: q, mode: "insensitive" } },
