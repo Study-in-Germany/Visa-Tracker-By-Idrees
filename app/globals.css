@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  background-color: #f7f8fb;
+  background-color: #f8fafc;
 }
 
 .badge {
@@ -19,7 +19,7 @@ body {
 }
 
 .btn-gold {
-  @apply inline-flex items-center justify-center rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400 transition-colors disabled:opacity-50;
+  @apply inline-flex items-center justify-center rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gold-400 transition-colors disabled:opacity-50;
 }
 
 .btn-secondary {
