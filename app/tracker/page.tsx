@@ -12,6 +12,7 @@ type Applicant = {
   publicId: string;
   name: string | null;
   university: string | null;
+  program: string | null;
   consulate: string;
   waitingListDate: string | null;
   visaStatus: string;
@@ -95,7 +96,9 @@ export default function TrackerPage() {
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
               <tr>
                 <th className="text-left px-4 py-3">Tracking ID</th>
+                <th className="text-left px-4 py-3">Name</th>
                 <th className="text-left px-4 py-3">University</th>
+                <th className="text-left px-4 py-3">Program</th>
                 <th className="text-left px-4 py-3">Consulate</th>
                 <th className="text-left px-4 py-3">Waiting Since</th>
                 <th className="text-left px-4 py-3">Status</th>
@@ -103,10 +106,10 @@ export default function TrackerPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">Loading…</td></tr>
               )}
               {!loading && applicants.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No entries yet.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">No entries yet.</td></tr>
               )}
               {applicants.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50">
@@ -115,7 +118,9 @@ export default function TrackerPage() {
                       {a.publicId}
                     </Link>
                   </td>
+                  <td className="px-4 py-3">{a.name || <span className="text-gray-400">Anonymous</span>}</td>
                   <td className="px-4 py-3">{a.university || "—"}</td>
+                  <td className="px-4 py-3">{a.program || "—"}</td>
                   <td className="px-4 py-3">{a.consulate}</td>
                   <td className="px-4 py-3">{fmtDate(a.waitingListDate)}</td>
                   <td className="px-4 py-3"><StatusBadge status={a.visaStatus} /></td>
