@@ -8,17 +8,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Professional slate-blue scale — used for headings, text, and
+        // outlined/dark UI elements. Lighter and softer than the old
+        // near-black navy.
         navy: {
-          950: "#0a1128",
-          900: "#0f1b3d",
-          800: "#152752",
-          700: "#1c3468",
-          600: "#274785",
+          50: "#f1f5f9",
+          600: "#3b5773",
+          700: "#33495f",
+          800: "#2a3b4d",
+          900: "#22303e",
+          950: "#1c2733",
         },
+        // Primary accent — a clean professional blue, replacing the old gold.
         gold: {
-          500: "#d4af37",
-          400: "#e0c158",
-          300: "#ecd587",
+          300: "#93c5fd",
+          400: "#3b82f6",
+          500: "#2563eb",
         },
       },
       fontFamily: {
