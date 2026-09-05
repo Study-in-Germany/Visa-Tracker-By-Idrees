@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StatusBadge from "@/components/StatusBadge";
@@ -12,23 +12,43 @@ type Applicant = {
   publicId: string;
   name: string | null;
   university: string | null;
-  program: string | null;
   consulate: string;
   waitingListDate: string | null;
+  documentSubmissionDate: string | null;
+  correctionRequestDate: string | null;
+  appointmentDate: string | null;
+  decisionDate: string | null;
   visaStatus: string;
 };
+
+// Builds a list of selectable months, most recent first, spanning a wide
+// enough range to cover past and upcoming waiting-list dates.
+function buildMonthOptions() {
+  const options: { value: string; label: string }[] = [];
+  const now = new Date();
+  for (let offset = 12; offset >= -12; offset--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("en-US", { month: "long", year: "numeric" });
+    options.push({ value, label });
+  }
+  return options;
+}
 
 export default function TrackerPage() {
   const router = useRouter();
   const [lookupId, setLookupId] = useState("");
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ consulate: "", visaStatus: "", q: "" });
+  const [filters, setFilters] = useState({ consulate: "", visaStatus: "", month: "", q: "" });
+
+  const monthOptions = useMemo(buildMonthOptions, []);
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (filters.consulate) params.set("consulate", filters.consulate);
     if (filters.visaStatus) params.set("visaStatus", filters.visaStatus);
+    if (filters.month) params.set("month", filters.month);
     if (filters.q) params.set("q", filters.q);
     setLoading(true);
     fetch(`/api/applicants?${params.toString()}`)
@@ -56,6 +76,9 @@ export default function TrackerPage() {
           />
           <button className="btn-gold shrink-0">Search</button>
         </form>
+        <p className="text-xs text-gray-400 mt-2">
+          Your Tracking ID also shows your exact queue position and estimated next-stage timeline.
+        </p>
       </section>
 
       <section>
@@ -88,6 +111,16 @@ export default function TrackerPage() {
                 <option key={k} value={k}>{v}</option>
               ))}
             </select>
+            <select
+              className="input w-44"
+              value={filters.month}
+              onChange={(e) => setFilters((f) => ({ ...f, month: e.target.value }))}
+            >
+              <option value="">All months</option>
+              {monthOptions.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -98,18 +131,20 @@ export default function TrackerPage() {
                 <th className="text-left px-4 py-3">Tracking ID</th>
                 <th className="text-left px-4 py-3">Name</th>
                 <th className="text-left px-4 py-3">University</th>
-                <th className="text-left px-4 py-3">Program</th>
                 <th className="text-left px-4 py-3">Consulate</th>
-                <th className="text-left px-4 py-3">Waiting Since</th>
+                <th className="text-left px-4 py-3">Waiting List</th>
+                <th className="text-left px-4 py-3">Submission</th>
+                <th className="text-left px-4 py-3">Correction</th>
+                <th className="text-left px-4 py-3">Appointment</th>
                 <th className="text-left px-4 py-3">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading && (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-400">Loading…</td></tr>
               )}
               {!loading && applicants.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">No entries yet.</td></tr>
+                <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-400">No entries match these filters.</td></tr>
               )}
               {applicants.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50">
@@ -120,9 +155,11 @@ export default function TrackerPage() {
                   </td>
                   <td className="px-4 py-3">{a.name || <span className="text-gray-400">Anonymous</span>}</td>
                   <td className="px-4 py-3">{a.university || "—"}</td>
-                  <td className="px-4 py-3">{a.program || "—"}</td>
                   <td className="px-4 py-3">{a.consulate}</td>
                   <td className="px-4 py-3">{fmtDate(a.waitingListDate)}</td>
+                  <td className="px-4 py-3">{fmtDate(a.documentSubmissionDate)}</td>
+                  <td className="px-4 py-3">{fmtDate(a.correctionRequestDate)}</td>
+                  <td className="px-4 py-3">{fmtDate(a.appointmentDate)}</td>
                   <td className="px-4 py-3"><StatusBadge status={a.visaStatus} /></td>
                 </tr>
               ))}
