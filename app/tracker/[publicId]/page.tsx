@@ -7,12 +7,49 @@ import { estimateNextStage } from "@/lib/eta";
 
 export const dynamic = "force-dynamic";
 
+const ACTIVE_STATUSES = [
+  "WAITING_LIST",
+  "WAITING_FOR_SUBMISSION",
+  "SUBMISSION_RECEIVED",
+  "UNDER_CORRECTION",
+  "APPOINTMENT_SCHEDULED",
+  "PROCESSING",
+];
+
 async function getApplicant(publicId: string) {
   const applicant = await prisma.applicant.findFirst({
     where: { publicId: publicId.toUpperCase(), approval: "APPROVED" },
     include: { history: { orderBy: { occurredAt: "asc" } } },
   });
   return applicant;
+}
+
+async function getQueuePosition(applicant: NonNullable<Awaited<ReturnType<typeof getApplicant>>>) {
+  // Only meaningful for applicants still in the active queue with a known
+  // waiting-list date — completed cases (issued/rejected/withdrawn) don't
+  // have a "position" anymore.
+  if (!applicant.waitingListDate) return null;
+  if (!ACTIVE_STATUSES.includes(applicant.visaStatus)) return null;
+
+  const [position, total] = await Promise.all([
+    prisma.applicant.count({
+      where: {
+        approval: "APPROVED",
+        consulate: applicant.consulate,
+        visaStatus: { in: ACTIVE_STATUSES as any },
+        waitingListDate: { lte: applicant.waitingListDate },
+      },
+    }),
+    prisma.applicant.count({
+      where: {
+        approval: "APPROVED",
+        consulate: applicant.consulate,
+        visaStatus: { in: ACTIVE_STATUSES as any },
+      },
+    }),
+  ]);
+
+  return { position, total };
 }
 
 async function getEta(applicant: NonNullable<Awaited<ReturnType<typeof getApplicant>>>) {
@@ -49,7 +86,7 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
   const applicant = await getApplicant(params.publicId);
   if (!applicant) notFound();
 
-  const eta = await getEta(applicant);
+  const [eta, queue] = await Promise.all([getEta(applicant), getQueuePosition(applicant)]);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -73,6 +110,18 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
           <Info label="Visa Type" value={applicant.visaType || "—"} />
         </div>
       </div>
+
+      {queue && (
+        <div className="card p-6 border-l-4 border-gold-500">
+          <h2 className="font-bold text-navy-950">Your Queue Position</h2>
+          <p className="text-2xl font-extrabold text-navy-950 mt-1">
+            #{queue.position} <span className="text-base font-medium text-gray-500">of {queue.total}</span>
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Among active applicants at {applicant.consulate}, ranked by waiting-list join date.
+          </p>
+        </div>
+      )}
 
       {eta && (
         <div className="card p-6 border-l-4 border-gold-500">
