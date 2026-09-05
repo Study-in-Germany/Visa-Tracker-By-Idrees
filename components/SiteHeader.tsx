@@ -19,14 +19,14 @@ export default function SiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="bg-navy-950 text-white sticky top-0 z-30 shadow-md">
+    <header className="bg-white text-gray-900 sticky top-0 z-30 border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16 gap-4">
         {/* Hamburger button — mobile only */}
         <button
           type="button"
           aria-label="Open menu"
           onClick={() => setOpen(true)}
-          className="sm:hidden -ml-1 p-2 rounded-lg hover:bg-navy-800 transition-colors"
+          className="sm:hidden -ml-1 p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -36,13 +36,13 @@ export default function SiteHeader() {
         </button>
 
         <Link href="/" className="flex items-center gap-2 font-bold text-lg shrink-0">
-          <span className="inline-block w-8 h-8 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center text-sm font-extrabold">
+          <span className="inline-block w-8 h-8 rounded-full bg-gold-500 text-white flex items-center justify-center text-sm font-extrabold">
             🇩🇪
           </span>
-          <span className="hidden sm:inline">
-            Visa Tracker <span className="text-gold-400">by Idrees</span>
+          <span className="hidden sm:inline text-navy-950">
+            Visa Tracker <span className="text-gold-500">by Idrees</span>
           </span>
-          <span className="sm:hidden">Visa Tracker</span>
+          <span className="sm:hidden text-navy-950">Visa Tracker</span>
         </Link>
 
         {/* Full nav — desktop only */}
@@ -51,20 +51,20 @@ export default function SiteHeader() {
             <Link
               key={item.href}
               href={item.href}
-              className="px-2.5 py-2 rounded-lg hover:bg-navy-800 transition-colors whitespace-nowrap"
+              className="px-2.5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-navy-950 transition-colors whitespace-nowrap"
             >
               {item.label}
             </Link>
           ))}
           <Link
             href="/submit"
-            className="ml-1 px-3 py-2 rounded-lg bg-gold-500 text-navy-950 hover:bg-gold-400 transition-colors font-semibold whitespace-nowrap"
+            className="ml-1 px-3 py-2 rounded-lg bg-gold-500 text-white hover:bg-gold-400 transition-colors font-semibold whitespace-nowrap"
           >
             Submit Entry
           </Link>
           <Link
             href="/login"
-            className="px-2.5 py-2 rounded-lg border border-navy-700 hover:bg-navy-800 transition-colors whitespace-nowrap"
+            className="px-2.5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
           >
             Login
           </Link>
@@ -72,7 +72,7 @@ export default function SiteHeader() {
 
         {/* Compact actions — mobile only, so Submit/Login are still reachable without opening the menu */}
         <div className="flex sm:hidden items-center gap-2">
-          <Link href="/submit" className="px-3 py-2 rounded-lg bg-gold-500 text-navy-950 text-sm font-semibold whitespace-nowrap">
+          <Link href="/submit" className="px-3 py-2 rounded-lg bg-gold-500 text-white text-sm font-semibold whitespace-nowrap">
             Submit
           </Link>
         </div>
@@ -81,7 +81,7 @@ export default function SiteHeader() {
       {/* Backdrop */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 sm:hidden"
+          className="fixed inset-0 bg-black/40 z-40 sm:hidden"
           onClick={() => setOpen(false)}
         />
       )}
@@ -126,7 +126,7 @@ export default function SiteHeader() {
           <Link
             href="/submit"
             onClick={() => setOpen(false)}
-            className="px-4 py-3 rounded-lg text-sm font-semibold bg-gold-500 text-navy-950 text-center mx-2"
+            className="px-4 py-3 rounded-lg text-sm font-semibold bg-gold-500 text-white text-center mx-2"
           >
             Submit Entry
           </Link>
