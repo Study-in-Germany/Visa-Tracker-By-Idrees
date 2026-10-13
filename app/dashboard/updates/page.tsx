@@ -1,43 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import Panel from "@/components/ui/Panel";
+import { EmptyState, ErrorState, LoadingBlock } from "@/components/ui/States";
 import StatusBadge from "@/components/StatusBadge";
+import { useApi } from "@/hooks/useApi";
 import { fmtDate } from "@/lib/format";
 
 export default function MyUpdatesPage() {
   const router = useRouter();
-  const [history, setHistory] = useState<any[] | null>(null);
+  const { data, error, loading, reload } = useApi<{ applicant: any }>("/api/applicant/me");
 
   useEffect(() => {
-    fetch("/api/applicant/me").then((r) => {
-      if (r.status === 401) { router.push("/login"); return null; }
-      return r.json();
-    }).then((data) => {
-      if (data) setHistory(data.applicant.history || []);
-    });
-  }, [router]);
+    if (error?.status === 401) router.push("/login");
+  }, [error, router]);
 
-  if (!history) return <p className="text-center text-gray-400 py-12">Loading…</p>;
+  if (loading && !data) return <LoadingBlock />;
+  if (error) return <div className="card"><ErrorState error={error} onRetry={reload} /></div>;
+  const history: any[] = data?.applicant?.history ?? [];
 
   return (
-    <div className="card p-6">
-      <h3 className="font-bold text-navy-950 mb-4">Status Update History</h3>
-      {history.length === 0 ? (
-        <p className="text-sm text-gray-400">No updates yet.</p>
-      ) : (
-        <ul className="space-y-3 text-sm">
-          {[...history].reverse().map((h) => (
-            <li key={h.id} className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3">
-              <div>
-                <StatusBadge status={h.visaStatus} />
-                {h.note && <p className="text-gray-500 mt-1">{h.note}</p>}
-              </div>
-              <span className="text-gray-400 shrink-0">{fmtDate(h.occurredAt)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <>
+      <PageHeader eyebrow="My entry" title="Status history" />
+      <Panel>
+        {history.length === 0 ? (
+          <EmptyState title="No updates yet" hint="Changes to your visa status will be listed here." />
+        ) : (
+          <ul className="divide-y divide-line">
+            {[...history].reverse().map((h) => (
+              <li key={h.id} className="flex flex-wrap items-start justify-between gap-2 py-3 first:pt-0 last:pb-0">
+                <div className="min-w-0">
+                  <StatusBadge status={h.visaStatus} />
+                  {h.note && <p className="mt-1 text-sm text-ink-700">{h.note}</p>}
+                </div>
+                <span className="text-sm text-ink-600">{fmtDate(h.occurredAt)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    </>
   );
 }

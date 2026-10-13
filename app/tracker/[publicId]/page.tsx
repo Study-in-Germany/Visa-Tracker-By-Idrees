@@ -1,4 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import Panel from "@/components/ui/Panel";
+import Icon from "@/components/ui/Icon";
 import { prisma } from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
 import { fmtDate } from "@/lib/format";
@@ -88,106 +92,98 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
 
   const [eta, queue] = await Promise.all([getEta(applicant), getQueuePosition(applicant)]);
 
+  const reached = JOURNEY_STAGES.filter((st) => (applicant as any)[st.key]).length;
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="font-mono text-sm text-gray-500">{applicant.publicId}</div>
-            <h1 className="text-xl font-bold text-navy-950 mt-1">
-              {applicant.isAnonymous ? "Anonymous Applicant" : applicant.name}
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              {applicant.university || "University not specified"}
-              {applicant.program ? ` · ${applicant.program}` : ""}
-            </p>
-          </div>
-          <StatusBadge status={applicant.visaStatus} />
+    <>
+      <Link href="/tracker" className="mb-2 inline-flex items-center gap-1 text-xs text-mute hover:text-ink-900">
+        <Icon name="chevronLeft" size={14} /> Tracker
+      </Link>
+      <PageHeader
+        eyebrow={applicant.publicId}
+        title={applicant.isAnonymous ? "Anonymous applicant" : applicant.name}
+        description={[applicant.university || "University not specified", applicant.program].filter(Boolean).join(" · ")}
+        actions={<StatusBadge status={applicant.visaStatus} />}
+      />
+
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-3">
+          <Panel title="Journey" description={`${reached} of ${JOURNEY_STAGES.length} stages recorded`}>
+            <ol className="relative ml-1.5 space-y-4 border-l border-line-strong pl-5">
+              {JOURNEY_STAGES.map((stage) => {
+                const value = (applicant as any)[stage.key] as Date | null;
+                return (
+                  <li key={stage.key} className="relative flex items-baseline justify-between gap-3">
+                    <span className={`absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full ring-4 ring-paper-raised ${value ? "bg-clay-500" : "bg-line-strong"}`} />
+                    <span className={value ? "font-medium" : "text-mute"}>{stage.label}</span>
+                    <span className={value ? "tabular-nums" : "text-mute"}>{value ? fmtDate(value) : "Not yet"}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </Panel>
+
+          {applicant.history.length > 0 && (
+            <Panel title="Status history">
+              <ul className="divide-y divide-line">
+                {applicant.history.map((h) => (
+                  <li key={h.id} className="flex items-start justify-between gap-3 py-2 first:pt-0 last:pb-0">
+                    <div>
+                      <StatusBadge status={h.visaStatus} />
+                      {h.note && <p className="mt-1 text-xs text-mute">{h.note}</p>}
+                    </div>
+                    <span className="shrink-0 text-xs text-mute">{fmtDate(h.occurredAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 text-sm">
-          <Info label="Consulate" value={applicant.consulate} />
-          <Info label="Intake" value={applicant.intake || "—"} />
-          <Info label="Visa Type" value={applicant.visaType || "—"} />
-        </div>
+
+        <aside className="space-y-3">
+          {queue && (
+            <Panel title="Queue position">
+              <p className="text-3xl font-bold tracking-tight">
+                #{queue.position}
+                <span className="ml-1.5 text-sm font-medium text-mute">of {queue.total}</span>
+              </p>
+              <p className="mt-1 text-xs text-mute">Active applicants at {applicant.consulate}, ranked by waiting-list date.</p>
+            </Panel>
+          )}
+          {eta && (
+            <Panel title={`Estimated: ${eta.stageLabel}`}>
+              <p className="text-lg font-semibold leading-snug">
+                {fmtDate(eta.earliest.toISOString())} – {fmtDate(eta.latest.toISOString())}
+              </p>
+              <p className="mt-1 text-xs text-mute">
+                Confidence {eta.confidence.toLowerCase()} · {eta.sampleSize} similar {eta.sampleSize === 1 ? "case" : "cases"} at {applicant.consulate}.
+              </p>
+              <p className="mt-3 text-[11px] text-mute">Unofficial estimate from community data, not a commitment from the consulate.</p>
+            </Panel>
+          )}
+          <Panel title="Details">
+            <dl className="grid grid-cols-2 gap-3">
+              <Info label="University" value={applicant.university || "—"} />
+              <Info label="Program" value={applicant.program || "—"} />
+              <Info label="Intake" value={applicant.intake || "—"} />
+              <Info label="Visa type" value={applicant.visaType || "—"} />
+              <Info label="Embassy" value={applicant.consulate} />
+              <Info label="Province" value={applicant.province || "—"} />
+              <Info label="Waiting-list category" value={applicant.waitingListCategory || "—"} />
+              <Info label="Heard about it via" value={applicant.sourceOfInformation || "—"} />
+            </dl>
+          </Panel>
+        </aside>
       </div>
-
-      {queue && (
-        <div className="card p-6 border-l-4 border-gold-500">
-          <h2 className="font-bold text-navy-950">Your Queue Position</h2>
-          <p className="text-2xl font-extrabold text-navy-950 mt-1">
-            #{queue.position} <span className="text-base font-medium text-gray-500">of {queue.total}</span>
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            Among active applicants at {applicant.consulate}, ranked by waiting-list join date.
-          </p>
-        </div>
-      )}
-
-      {eta && (
-        <div className="card p-6 border-l-4 border-gold-500">
-          <h2 className="font-bold text-navy-950">Estimated {eta.stageLabel}</h2>
-          <p className="text-2xl font-extrabold text-navy-950 mt-1">
-            {fmtDate(eta.earliest.toISOString())} – {fmtDate(eta.latest.toISOString())}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            Confidence: <span className="font-semibold">{eta.confidence}</span> (based on{" "}
-            {eta.sampleSize} similar {eta.sampleSize === 1 ? "case" : "cases"} at{" "}
-            {applicant.consulate})
-          </p>
-          <p className="text-xs text-gray-400 mt-3">
-            This is an unofficial estimate calculated from community-reported data. It does not
-            represent a commitment from the German consulate.
-          </p>
-        </div>
-      )}
-
-      <div className="card p-6">
-        <h2 className="font-bold text-navy-950 mb-4">Visa Journey Timeline</h2>
-        <ol className="space-y-4">
-          {JOURNEY_STAGES.map((stage) => {
-            const value = (applicant as any)[stage.key] as Date | null;
-            return (
-              <li key={stage.key} className="flex items-center gap-3">
-                <span
-                  className={`w-3 h-3 rounded-full shrink-0 ${
-                    value ? "bg-navy-700" : "bg-gray-200"
-                  }`}
-                />
-                <span className={`flex-1 text-sm ${value ? "text-gray-900" : "text-gray-400"}`}>
-                  {stage.label}
-                </span>
-                <span className="text-sm text-gray-500">{value ? fmtDate(value) : "Pending"}</span>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
-
-      {applicant.history.length > 0 && (
-        <div className="card p-6">
-          <h2 className="font-bold text-navy-950 mb-4">Status History</h2>
-          <ul className="space-y-3 text-sm">
-            {applicant.history.map((h) => (
-              <li key={h.id} className="flex items-start justify-between gap-3">
-                <div>
-                  <StatusBadge status={h.visaStatus} />
-                  {h.note && <p className="text-gray-500 mt-1">{h.note}</p>}
-                </div>
-                <span className="text-gray-400 shrink-0">{fmtDate(h.occurredAt)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <div className="text-xs text-gray-400 uppercase tracking-wide">{label}</div>
-      <div className="font-medium text-gray-800">{value}</div>
+    <div className="min-w-0">
+      <dt className="text-[11px] uppercase tracking-wider text-mute">{label}</dt>
+      <dd className="break-words font-medium">{value}</dd>
     </div>
   );
 }

@@ -1,58 +1,67 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Suspense, useState } from "react";
+import dynamic from "next/dynamic";
+import PageHeader from "@/components/ui/PageHeader";
+import Panel from "@/components/ui/Panel";
+import StatCard from "@/components/ui/StatCard";
+import PeriodFilters from "@/components/PeriodFilters";
+import { EmptyState, ErrorState, LoadingBlock } from "@/components/ui/States";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { usePeriod } from "@/hooks/usePeriod";
+import { describePeriod } from "@/lib/dates";
 
-export default function QueueProgressPage() {
-  const [data, setData] = useState<any>(null);
+const MonthlyBars = dynamic(() => import("@/components/charts/MonthlyBars"), {
+  ssr: false,
+  loading: () => <LoadingBlock label="Loading chart" rows={1} />,
+});
 
-  useEffect(() => {
-    fetch("/api/analytics").then((r) => r.json()).then(setData);
-  }, []);
-
-  if (!data) return <p className="text-center text-gray-400 py-12">Loading…</p>;
+function QueueInner() {
+  const [period, setPeriod] = usePeriod();
+  const [consulate, setConsulate] = useState("");
+  const { data, error, loading, reload } = useAnalytics(period, consulate);
+  const first = loading && !data;
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-navy-950">Queue Progress</h1>
-        <p className="text-gray-600 text-sm mt-1">
-          How the waiting list is moving, and how long each processing stage is taking on average.
-        </p>
-      </div>
+    <>
+      <PageHeader
+        eyebrow="Queue progress"
+        title="Stage by stage"
+        description={`How long each step is taking · ${describePeriod(period)}${consulate ? ` · ${consulate}` : ""}.`}
+        actions={<PeriodFilters period={period} onPeriod={setPeriod} consulate={consulate} onConsulate={setConsulate} />}
+      />
 
-      <section className="grid sm:grid-cols-3 gap-4">
-        <Metric label="Avg. Waiting → Submission" value={data.processing.avgWaitingToSubmission} />
-        <Metric label="Avg. Submission → Appointment" value={data.processing.avgSubmissionToAppointment} />
-        <Metric label="Avg. Appointment → Decision" value={data.processing.avgAppointmentToDecision} />
-      </section>
+      {error && !data ? (
+        <div className="card"><ErrorState error={error} onRetry={reload} /></div>
+      ) : (
+        <div className={`space-y-4 transition-opacity ${loading && data ? "opacity-60" : ""}`}>
+          <section className="grid gap-3 sm:grid-cols-3">
+            <StatCard variant="wide" format="days" icon="hourglass" tone="warn" label="Waiting list → invitation" value={data?.processing.avgWaitingToSubmission} loading={first} />
+            <StatCard variant="wide" format="days" icon="send" tone="sage" label="Documents → appointment" value={data?.processing.avgSubmissionToAppointment} loading={first} />
+            <StatCard variant="wide" format="days" icon="calendar" tone="good" label="Appointment → decision" value={data?.processing.avgAppointmentToDecision} loading={first} />
+          </section>
 
-      <section className="card p-4">
-        <h3 className="font-semibold text-navy-950 mb-2 text-sm">New Waiting-List Joins per Month</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data.monthlyVolume}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" fontSize={12} />
-            <YAxis allowDecimals={false} fontSize={12} />
-            <Tooltip />
-            <Bar dataKey="count" fill="#152752" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </section>
+          <Panel title="New waiting-list joins" description="Applicants per month">
+            {data && data.monthlyVolume.length > 0 ? (
+              <MonthlyBars data={data.monthlyVolume} series={[{ key: "count", label: "Applicants", color: "#4a6350" }]} height={300} />
+            ) : first ? (
+              <LoadingBlock rows={1} />
+            ) : (
+              <EmptyState title="No waiting-list dates in this period" hint="Try a wider date range." />
+            )}
+          </Panel>
 
-      <p className="text-xs text-gray-400">
-        These figures reflect community-submitted, admin-approved entries only and are for general
-        guidance — they are not official consulate processing statistics.
-      </p>
-    </div>
+          <p className="text-xs text-ink-600">Based on community-submitted, admin-approved entries. Averages only include entries with both dates filled in.</p>
+        </div>
+      )}
+    </>
   );
 }
 
-function Metric({ label, value }: { label: string; value: number | null }) {
+export default function QueueProgressPage() {
   return (
-    <div className="card p-5 text-center">
-      <div className="text-3xl font-extrabold text-navy-950">{value ?? "—"}</div>
-      <div className="text-xs text-gray-500 mt-1">{label}{value !== null ? " days" : ""}</div>
-    </div>
+    <Suspense fallback={<LoadingBlock />}>
+      <QueueInner />
+    </Suspense>
   );
 }

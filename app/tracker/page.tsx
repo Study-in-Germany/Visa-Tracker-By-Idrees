@@ -1,172 +1,152 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import StatCard from "@/components/ui/StatCard";
+import DataTable, { Column, SortState } from "@/components/ui/DataTable";
+import DateRangePicker from "@/components/ui/DateRangePicker";
+import Select from "@/components/ui/Select";
+import { FilterChip } from "@/components/ui/Chip";
+import { LoadingBlock } from "@/components/ui/States";
+import Icon from "@/components/ui/Icon";
 import StatusBadge from "@/components/StatusBadge";
+import { CONSULATE_OPTIONS } from "@/components/PeriodFilters";
+import { useApplicants } from "@/hooks/useApplicants";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { useDebounced } from "@/hooks/useDebounced";
+import { usePeriod } from "@/hooks/usePeriod";
 import { fmtDate } from "@/lib/format";
-import { CONSULATES, VISA_STATUS_LABELS } from "@/lib/constants";
+import { describePeriod } from "@/lib/dates";
+import { VISA_STATUS_LABELS } from "@/lib/constants";
+import type { ApplicantRow } from "@/lib/types";
+import type { Period } from "@/lib/period";
 
-type Applicant = {
-  id: string;
-  publicId: string;
-  name: string | null;
-  university: string | null;
-  consulate: string;
-  waitingListDate: string | null;
-  documentSubmissionDate: string | null;
-  correctionRequestDate: string | null;
-  appointmentDate: string | null;
-  decisionDate: string | null;
-  visaStatus: string;
-};
+const STATUS_OPTIONS = [{ value: "", label: "All statuses" }, ...Object.entries(VISA_STATUS_LABELS).map(([value, label]) => ({ value, label }))];
 
-// Builds a list of selectable months, most recent first, spanning a wide
-// enough range to cover past and upcoming waiting-list dates.
-function buildMonthOptions() {
-  const options: { value: string; label: string }[] = [];
-  const now = new Date();
-  for (let offset = 12; offset >= -12; offset--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleString("en-US", { month: "long", year: "numeric" });
-    options.push({ value, label });
-  }
-  return options;
-}
+const CONSULATE_FILTER_OPTIONS = CONSULATE_OPTIONS.filter((o) => o.value);
 
-export default function TrackerPage() {
-  const router = useRouter();
-  const [lookupId, setLookupId] = useState("");
-  const [applicants, setApplicants] = useState<Applicant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ consulate: "", visaStatus: "", month: "", q: "" });
+type ColumnFilters = { university: string; setUniversity: (v: string) => void; consulate: string; setConsulate: (v: string) => void; status: string; setStatus: (v: string) => void; period: Period; setPeriod: (p: Period) => void };
 
-  const monthOptions = useMemo(buildMonthOptions, []);
+const buildColumns = (f: ColumnFilters): Column<ApplicantRow>[] => [
+  {
+    key: "id",
+    header: "Tracking ID",
+    sortKey: "publicId",
+    mobile: "title",
+    cell: (a) => (
+      <Link href={`/tracker/${a.publicId}`} className="font-mono font-medium text-ink-900 underline-offset-2 hover:text-clay-600 hover:underline">
+        {a.publicId}
+      </Link>
+    ),
+  },
+  { key: "name", header: "Name", mobile: "hidden", hideBelow: "lg", cell: (a) => a.name || <span className="text-mute">Anonymous</span> },
+  { key: "university", header: "University", sortKey: "university", cell: (a) => a.university || "—", filter: { type: "text", label: "University", placeholder: "University contains…", value: f.university, onChange: f.setUniversity } },
+  { key: "consulate", header: "Embassy", sortKey: "consulate", cell: (a) => a.consulate, filter: { type: "select", label: "Embassy", value: f.consulate, options: CONSULATE_FILTER_OPTIONS, onChange: f.setConsulate } },
+  { key: "waiting", header: "Waiting list", sortKey: "waitingListDate", cell: (a) => fmtDate(a.waitingListDate), filter: { type: "range", label: "Waiting-list date", value: f.period, onChange: f.setPeriod } },
+  { key: "docs", header: "Documents", sortKey: "documentSubmissionDate", hideBelow: "xl", cell: (a) => fmtDate(a.documentSubmissionDate) },
+  { key: "correction", header: "Correction", hideBelow: "xl", cell: (a) => fmtDate(a.correctionRequestDate) },
+  { key: "appointment", header: "Appointment", sortKey: "appointmentDate", hideBelow: "lg", cell: (a) => fmtDate(a.appointmentDate) },
+  { key: "status", header: "Status", sortKey: "visaStatus", mobile: "badge", cell: (a) => <StatusBadge status={a.visaStatus} />, filter: { type: "select", label: "Status", value: f.status, options: STATUS_OPTIONS.filter((o) => o.value), onChange: f.setStatus } },
+];
 
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (filters.consulate) params.set("consulate", filters.consulate);
-    if (filters.visaStatus) params.set("visaStatus", filters.visaStatus);
-    if (filters.month) params.set("month", filters.month);
-    if (filters.q) params.set("q", filters.q);
-    setLoading(true);
-    fetch(`/api/applicants?${params.toString()}`)
-      .then((r) => r.json())
-      .then((data) => setApplicants(data.applicants || []))
-      .finally(() => setLoading(false));
-  }, [filters]);
+function TrackerInner() {
+  const initialQ = useSearchParams().get("q") || "";
+  const [period, setPeriod] = usePeriod();
+  const [search, setSearch] = useState(initialQ);
+  const [consulate, setConsulate] = useState("");
+  const [university, setUniversity] = useState("");
+  const [visaStatus, setVisaStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<SortState>(null);
 
-  function handleLookup(e: React.FormEvent) {
-    e.preventDefault();
-    if (lookupId.trim()) router.push(`/tracker/${encodeURIComponent(lookupId.trim().toUpperCase())}`);
+  const q = useDebounced(search.trim());
+  const filters = useMemo(() => ({ q, consulate, university, visaStatus, from: period.from, to: period.to }), [q, consulate, university, visaStatus, period]);
+  const columns = useMemo(() => buildColumns({ university, setUniversity, consulate, setConsulate, status: visaStatus, setStatus: setVisaStatus, period, setPeriod }), [university, consulate, visaStatus, period, setPeriod]);
+  useEffect(() => setPage(1), [filters]);
+
+  const { data, error, loading, reload } = useApplicants(filters, page, sort);
+  // Stat tiles follow the same period + embassy as the table
+  const stats = useAnalytics(period, consulate);
+  const s = stats.data;
+  const hasFilters = !!(q || consulate || university || visaStatus || period.from || period.to);
+
+  function clearAll() {
+    setSearch("");
+    setConsulate("");
+    setUniversity("");
+    setVisaStatus("");
+    setPeriod({ from: "", to: "" });
   }
 
   return (
-    <div className="space-y-8">
-      <section className="card p-6 max-w-xl mx-auto text-center">
-        <h1 className="text-xl font-bold text-navy-950">Track Your Application</h1>
-        <p className="text-sm text-gray-500 mt-1">Enter your Tracking ID, e.g. PK-ISB-10482</p>
-        <form onSubmit={handleLookup} className="mt-4 flex gap-2">
-          <input
-            className="input"
-            placeholder="PK-ISB-10482"
-            value={lookupId}
-            onChange={(e) => setLookupId(e.target.value)}
-          />
-          <button className="btn-gold shrink-0">Search</button>
-        </form>
-        <p className="text-xs text-gray-400 mt-2">
-          Your Tracking ID also shows your exact queue position and estimated next-stage timeline.
-        </p>
+    <>
+      <PageHeader
+        title="Tracker"
+        description="Everyone the community has shared. Use the search bar above to jump to a Tracking ID."
+        actions={
+          <>
+            <DateRangePicker value={period} onChange={setPeriod} />
+            <Select variant="pill" label="Embassy" prefix="Embassy" value={consulate} onChange={setConsulate} options={CONSULATE_OPTIONS} className="w-full sm:w-auto" />
+            <Select variant="pill" label="Status" prefix="Status" value={visaStatus} onChange={setVisaStatus} options={STATUS_OPTIONS} className="w-full sm:w-auto" />
+          </>
+        }
+      />
+
+      <section aria-label="Summary" className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard icon="users" tone="sage" label="Applicants" value={s?.total} loading={stats.loading && !s} />
+        <StatCard icon="hourglass" tone="warn" label="In the queue" value={s?.activeApplicants} loading={stats.loading && !s} />
+        <StatCard icon="checkCircle" tone="good" label="Visa issued" value={s?.visaIssued} loading={stats.loading && !s} />
+        <StatCard icon="xcircle" tone="bad" label="Rejected" value={s?.visaRejected} loading={stats.loading && !s} />
       </section>
 
-      <section>
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h2 className="font-bold text-navy-950">Public Tracker</h2>
-          <div className="flex flex-wrap gap-2">
-            <input
-              className="input w-40"
-              placeholder="Search ID or university"
-              value={filters.q}
-              onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-            />
-            <select
-              className="input w-36"
-              value={filters.consulate}
-              onChange={(e) => setFilters((f) => ({ ...f, consulate: e.target.value }))}
-            >
-              <option value="">All consulates</option>
-              {CONSULATES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <select
-              className="input w-48"
-              value={filters.visaStatus}
-              onChange={(e) => setFilters((f) => ({ ...f, visaStatus: e.target.value }))}
-            >
-              <option value="">All statuses</option>
-              {Object.entries(VISA_STATUS_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-            <select
-              className="input w-44"
-              value={filters.month}
-              onChange={(e) => setFilters((f) => ({ ...f, month: e.target.value }))}
-            >
-              <option value="">All months</option>
-              {monthOptions.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
+      <section className="card overflow-hidden" aria-label="Applicants">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+          <div className="relative w-full sm:w-64">
+            <Icon name="search" size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-mute" />
+            <input className="input !min-h-[30px] !py-1 pl-8 !text-xs" type="search" aria-label="Filter the table" placeholder="Filter this table…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {consulate && <FilterChip label={`Embassy: ${consulate}`} active onRemove={() => setConsulate("")} />}
+            {university && <FilterChip label={`University: ${university}`} active onRemove={() => setUniversity("")} />}
+            {visaStatus && <FilterChip label={VISA_STATUS_LABELS[visaStatus]} active onRemove={() => setVisaStatus("")} />}
+            {(period.from || period.to) && <FilterChip label={describePeriod(period)} active onRemove={() => setPeriod({ from: "", to: "" })} />}
+            {hasFilters && (
+              <button type="button" onClick={clearAll} className="min-h-[32px] px-2 text-xs font-medium text-clay-600 hover:underline">
+                Clear all
+              </button>
+            )}
           </div>
         </div>
-
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-              <tr>
-                <th className="text-left px-4 py-3">Tracking ID</th>
-                <th className="text-left px-4 py-3">Name</th>
-                <th className="text-left px-4 py-3">University</th>
-                <th className="text-left px-4 py-3">Consulate</th>
-                <th className="text-left px-4 py-3">Waiting List</th>
-                <th className="text-left px-4 py-3">Submission</th>
-                <th className="text-left px-4 py-3">Correction</th>
-                <th className="text-left px-4 py-3">Appointment</th>
-                <th className="text-left px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading && (
-                <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-400">Loading…</td></tr>
-              )}
-              {!loading && applicants.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-400">No entries match these filters.</td></tr>
-              )}
-              {applicants.map((a) => (
-                <tr key={a.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono">
-                    <Link href={`/tracker/${a.publicId}`} className="text-navy-700 hover:underline">
-                      {a.publicId}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">{a.name || <span className="text-gray-400">Anonymous</span>}</td>
-                  <td className="px-4 py-3">{a.university || "—"}</td>
-                  <td className="px-4 py-3">{a.consulate}</td>
-                  <td className="px-4 py-3">{fmtDate(a.waitingListDate)}</td>
-                  <td className="px-4 py-3">{fmtDate(a.documentSubmissionDate)}</td>
-                  <td className="px-4 py-3">{fmtDate(a.correctionRequestDate)}</td>
-                  <td className="px-4 py-3">{fmtDate(a.appointmentDate)}</td>
-                  <td className="px-4 py-3"><StatusBadge status={a.visaStatus} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          embedded
+          caption="Public applicant tracker"
+          rowHref={(a) => `/tracker/${a.publicId}`}
+          columns={columns}
+          rows={data?.applicants ?? []}
+          rowKey={(a) => a.id}
+          loading={loading}
+          error={error}
+          onRetry={reload}
+          emptyTitle={hasFilters ? "No entries match these filters" : "No approved entries yet"}
+          emptyHint={hasFilters ? "Try removing a filter or widening the date range." : "Entries appear here after an admin approves them."}
+          sort={sort}
+          onSort={(next) => { setSort(next); setPage(1); }}
+          page={data?.page ?? page}
+          pageCount={data?.pageCount ?? 1}
+          total={data?.count}
+          onPage={setPage}
+        />
       </section>
-    </div>
+    </>
+  );
+}
+
+export default function TrackerPage() {
+  return (
+    <Suspense fallback={<LoadingBlock />}>
+      <TrackerInner />
+    </Suspense>
   );
 }

@@ -34,16 +34,51 @@ export const VISA_STATUS_ORDER = [
 ];
 
 export const VISA_STATUS_COLORS: Record<string, string> = {
-  WAITING_LIST: "bg-gray-100 text-gray-800 border-gray-200",
-  WAITING_FOR_SUBMISSION: "bg-blue-100 text-blue-800 border-blue-200",
-  SUBMISSION_RECEIVED: "bg-indigo-100 text-indigo-800 border-indigo-200",
-  UNDER_CORRECTION: "bg-amber-100 text-amber-800 border-amber-200",
-  APPOINTMENT_SCHEDULED: "bg-violet-100 text-violet-800 border-violet-200",
-  PROCESSING: "bg-cyan-100 text-cyan-800 border-cyan-200",
-  VISA_ISSUED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  VISA_REJECTED: "bg-red-100 text-red-800 border-red-200",
-  WITHDRAWN: "bg-gray-100 text-gray-500 border-gray-200",
-  OTHER: "bg-gray-100 text-gray-600 border-gray-200",
+  WAITING_LIST: "bg-paper-sunk text-ink-700 border-line-strong",
+  WAITING_FOR_SUBMISSION: "bg-ochre-50 text-ochre-700 border-ochre-500/30",
+  SUBMISSION_RECEIVED: "bg-ink-50 text-ink-700 border-ink-300/50",
+  UNDER_CORRECTION: "bg-clay-50 text-clay-600 border-clay-400/40",
+  APPOINTMENT_SCHEDULED: "bg-ink-100 text-ink-800 border-ink-300",
+  PROCESSING: "bg-ochre-50 text-ochre-700 border-ochre-500/40",
+  VISA_ISSUED: "bg-emerald-50 text-emerald-800 border-emerald-300",
+  VISA_REJECTED: "bg-red-50 text-red-800 border-red-300",
+  WITHDRAWN: "bg-paper-sunk text-ink-600 border-line",
+  OTHER: "bg-paper-sunk text-ink-600 border-line",
+};
+
+// Hex values for charts, kept in step with VISA_STATUS_COLORS.
+export const VISA_STATUS_HEX: Record<string, string> = {
+  WAITING_LIST: "#a89f8a",
+  WAITING_FOR_SUBMISSION: "#d2a63a",
+  SUBMISSION_RECEIVED: "#7f9a86",
+  UNDER_CORRECTION: "#cd6a45",
+  APPOINTMENT_SCHEDULED: "#4a6350",
+  PROCESSING: "#b98a1f",
+  VISA_ISSUED: "#2f7d57",
+  VISA_REJECTED: "#b3372f",
+  WITHDRAWN: "#c9c1ae",
+  OTHER: "#d9d2c0",
+};
+
+export const ACTIVE_STATUSES = [
+  "WAITING_LIST",
+  "WAITING_FOR_SUBMISSION",
+  "SUBMISSION_RECEIVED",
+  "UNDER_CORRECTION",
+  "APPOINTMENT_SCHEDULED",
+  "PROCESSING",
+];
+
+export const APPROVAL_LABELS: Record<string, string> = {
+  PENDING_REVIEW: "Pending review",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
+export const APPROVAL_COLORS: Record<string, string> = {
+  PENDING_REVIEW: "bg-ochre-50 text-ochre-700 border-ochre-500/40",
+  APPROVED: "bg-emerald-50 text-emerald-800 border-emerald-300",
+  REJECTED: "bg-red-50 text-red-800 border-red-300",
 };
 
 export const GENDER_LABELS: Record<string, string> = {

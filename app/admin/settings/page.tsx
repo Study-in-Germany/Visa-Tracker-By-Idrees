@@ -1,53 +1,49 @@
 "use client";
 
 import { useState } from "react";
+import PageHeader from "@/components/ui/PageHeader";
+import Panel from "@/components/ui/Panel";
+import Field from "@/components/ui/Field";
+import { Notice } from "@/components/ui/States";
+import { apiFetch, jsonInit } from "@/lib/api";
 
 export default function AdminSettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    setMessage("");
+    setMsg(null);
     setSaving(true);
-    const res = await fetch("/api/admin/password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-    setSaving(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || "Could not update password.");
-      return;
+    try {
+      await apiFetch("/api/admin/password", jsonInit("POST", { currentPassword, newPassword }));
+      setMsg({ tone: "success", text: "Password updated." });
+      setCurrentPassword("");
+      setNewPassword("");
+    } catch (err: any) {
+      setMsg({ tone: "error", text: err.message || "Could not update password." });
+    } finally {
+      setSaving(false);
     }
-    setMessage("Password updated.");
-    setCurrentPassword("");
-    setNewPassword("");
   }
 
   return (
-    <div className="max-w-md">
-      <div className="card p-6">
-        <h3 className="font-bold text-navy-950 mb-4">Change Admin Password</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="label">Current Password</label>
-            <input type="password" className="input" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
-          </div>
-          <div>
-            <label className="label">New Password</label>
-            <input type="password" className="input" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} />
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {message && <p className="text-sm text-emerald-600">{message}</p>}
-          <button className="btn-gold" disabled={saving}>{saving ? "Saving…" : "Update Password"}</button>
+    <>
+      <PageHeader title="Settings" />
+      <Panel title="Change admin password" className="max-w-md">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <Field label="Current password" htmlFor="cp">
+            <input id="cp" type="password" className="input" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+          </Field>
+          <Field label="New password" htmlFor="np" hint="At least 8 characters.">
+            <input id="np" type="password" className="input" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} />
+          </Field>
+          {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
+          <button className="btn-gold" disabled={saving}>{saving ? "Saving…" : "Update password"}</button>
         </form>
-      </div>
-    </div>
+      </Panel>
+    </>
   );
 }

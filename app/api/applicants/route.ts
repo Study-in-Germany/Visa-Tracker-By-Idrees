@@ -4,6 +4,24 @@ import { submitApplicantSchema } from "@/lib/validations";
 import { getSession } from "@/lib/auth";
 import { buildPublicId, generateAccessCode } from "@/lib/ids";
 import bcrypt from "bcryptjs";
+import { waitingListWhere } from "@/lib/period";
+import { VISA_STATUS_LABELS } from "@/lib/constants";
+
+const DATE_FIELDS = ["waitingListDate", "submissionInviteDate", "documentSubmissionDate", "correctionRequestDate", "correctionSubmittedDate", "appointmentDate", "interviewDate", "decisionDate"] as const;
+
+// Accepts 2026-03-05, 05/03/2026 and 05-03-2026 (day first). Returns the UTC day range, or null.
+function parseDayRange(q: string): { gte: Date; lt: Date } | null {
+  let y: number, m: number, d: number;
+  let match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(q);
+  if (match) { y = +match[1]; m = +match[2]; d = +match[3]; }
+  else if ((match = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(q))) { d = +match[1]; m = +match[2]; y = +match[3]; }
+  else return null;
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const start = new Date(Date.UTC(y, m - 1, d));
+  return { gte: start, lt: new Date(start.getTime() + 86400000) };
+}
+
+const SORTABLE = new Set(["publicId", "university", "consulate", "waitingListDate", "documentSubmissionDate", "appointmentDate", "visaStatus", "createdAt"]);
 
 // GET /api/applicants — public dashboard data (approved only, unless admin)
 export async function GET(req: NextRequest) {
@@ -16,6 +34,12 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get("q") || undefined;
   const approvalParam = searchParams.get("approval") || undefined;
   const month = searchParams.get("month") || undefined; // format: YYYY-MM, filters by waiting-list join month
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+  const page = Math.max(1, parseInt(searchParams.get("page") || "", 10) || 0);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "", 10) || 25));
+  const sortParam = searchParams.get("sort") || "";
+  const dir = searchParams.get("dir") === "desc" ? "desc" : "asc";
 
   const where: any = {};
 
@@ -38,16 +62,36 @@ export async function GET(req: NextRequest) {
       where.waitingListDate = { gte: start, lt: end };
     }
   }
+  const range = waitingListWhere(from, to);
+  if (range) where.waitingListDate = { ...(where.waitingListDate || {}), ...range };
   if (q) {
+    const ci = { contains: q, mode: "insensitive" as const };
+    const statuses = Object.entries(VISA_STATUS_LABELS)
+      .filter(([k, label]) => label.toLowerCase().includes(q.toLowerCase()) || k.toLowerCase().includes(q.toLowerCase().replace(/\s+/g, "_")))
+      .map(([k]) => k);
+    const day = parseDayRange(q.trim());
     where.OR = [
-      { publicId: { contains: q, mode: "insensitive" } },
-      ...(session ? [{ name: { contains: q, mode: "insensitive" } }] : []),
+      { publicId: ci },
+      { university: ci },
+      { program: ci },
+      { consulate: ci },
+      { intake: ci },
+      ...(statuses.length ? [{ visaStatus: { in: statuses as any } }] : []),
+      ...(day ? DATE_FIELDS.map((f) => ({ [f]: day })) : []),
+      ...(session ? [{ name: ci }, { city: ci }] : []),
     ];
   }
 
-  const applicants = await prisma.applicant.findMany({
+  const orderBy: any[] = SORTABLE.has(sortParam)
+    ? [{ [sortParam]: dir }, { createdAt: "asc" }]
+    : [{ waitingListDate: "asc" }, { createdAt: "asc" }];
+
+  const [total, applicants] = await Promise.all([
+    prisma.applicant.count({ where }),
+    prisma.applicant.findMany({
     where,
-    orderBy: [{ waitingListDate: "asc" }, { createdAt: "asc" }],
+    orderBy,
+    ...(page ? { skip: (page - 1) * pageSize, take: pageSize } : {}),
     select: {
       id: true,
       publicId: true,
@@ -69,7 +113,8 @@ export async function GET(req: NextRequest) {
       isAnonymous: true,
       createdAt: true,
     },
-  });
+    }),
+  ]);
 
   // Applicants who chose to stay anonymous keep their name hidden on the public view.
   const display = applicants.map((a) => ({
@@ -77,7 +122,13 @@ export async function GET(req: NextRequest) {
     name: !session && a.isAnonymous ? null : a.name,
   }));
 
-  return NextResponse.json({ applicants: display, count: display.length });
+  return NextResponse.json({
+    applicants: display,
+    count: total,
+    page: page || 1,
+    pageSize: page ? pageSize : total,
+    pageCount: page ? Math.max(1, Math.ceil(total / pageSize)) : 1,
+  });
 }
 
 // POST /api/applicants — student self-submission (goes to PENDING_REVIEW)
@@ -147,7 +198,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(
     {
-      applicant,
+      applicant: (({ accessCodeHash: _hash, ...safe }) => safe)(applicant),
       publicId: applicant.publicId,
       accessCode,
       message:

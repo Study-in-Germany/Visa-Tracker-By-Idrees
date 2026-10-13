@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { waitingListWhere } from "@/lib/period";
+import { ACTIVE_STATUSES } from "@/lib/constants";
 
 function daysBetween(a: Date | null, b: Date | null) {
   if (!a || !b) return null;
@@ -11,9 +13,21 @@ function avg(nums: number[]) {
   return Math.round(nums.reduce((s, d) => s + d, 0) / nums.length);
 }
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+// GET /api/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD&consulate=Islamabad
+// from/to filter by waiting-list join date (the applicant cohort).
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const consulate = searchParams.get("consulate") || undefined;
+  const waitingListDate = waitingListWhere(searchParams.get("from"), searchParams.get("to"));
+
   const applicants = await prisma.applicant.findMany({
-    where: { approval: "APPROVED" },
+    where: {
+      approval: "APPROVED",
+      ...(consulate ? { consulate } : {}),
+      ...(waitingListDate ? { waitingListDate } : {}),
+    },
     select: {
       university: true,
       consulate: true,
@@ -32,14 +46,7 @@ export async function GET() {
   const statusCounts: Record<string, number> = {};
   for (const a of applicants) statusCounts[a.visaStatus] = (statusCounts[a.visaStatus] || 0) + 1;
 
-  const activeStatuses = new Set([
-    "WAITING_LIST",
-    "WAITING_FOR_SUBMISSION",
-    "SUBMISSION_RECEIVED",
-    "UNDER_CORRECTION",
-    "APPOINTMENT_SCHEDULED",
-    "PROCESSING",
-  ]);
+  const activeStatuses = new Set(ACTIVE_STATUSES);
   const activeApplicants = applicants.filter((a) => activeStatuses.has(a.visaStatus)).length;
   const completedCases = applicants.filter((a) =>
     ["VISA_ISSUED", "VISA_REJECTED", "WITHDRAWN"].includes(a.visaStatus)
@@ -96,13 +103,13 @@ export async function GET() {
   for (const a of applicants) {
     const d = a.waitingListDate;
     if (!d) continue;
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     monthCounts[key] = (monthCounts[key] || 0) + 1;
   }
   for (const a of applicants) {
     const d = a.decisionDate;
     if (!d) continue;
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     monthOutcomes[key] = monthOutcomes[key] || { issued: 0, rejected: 0 };
     if (a.visaStatus === "VISA_ISSUED") monthOutcomes[key].issued++;
     if (a.visaStatus === "VISA_REJECTED") monthOutcomes[key].rejected++;

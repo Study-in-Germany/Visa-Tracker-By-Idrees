@@ -1,6 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import PageHeader from "@/components/ui/PageHeader";
+import Panel from "@/components/ui/Panel";
+import FileDrop from "@/components/ui/FileDrop";
+import Icon from "@/components/ui/Icon";
+import { Chip } from "@/components/ui/Chip";
+import { Notice } from "@/components/ui/States";
+import { apiFetch } from "@/lib/api";
 
 export default function AdminImportPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -14,90 +21,50 @@ export default function AdminImportPage() {
     setUploading(true);
     setError("");
     setResult(null);
-
     const formData = new FormData();
     formData.append("file", file);
-
-    const res = await fetch("/api/admin/import-applicants", {
-      method: "POST",
-      body: formData,
-    });
-    const data = await res.json();
-    setUploading(false);
-
-    if (!res.ok) {
-      setError(data.error || "Import failed.");
-      return;
+    try {
+      setResult(await apiFetch("/api/admin/import-applicants", { method: "POST", body: formData }));
+    } catch (err: any) {
+      setError(err.message || "Import failed.");
+    } finally {
+      setUploading(false);
     }
-    setResult(data);
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="card p-6">
-        <h3 className="font-bold text-navy-950 mb-2">Import Applicants from CSV</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Bulk-add applicants from a spreadsheet. Each row becomes an approved applicant record —
-          review them afterward under Applicants if needed.
-        </p>
-        <a href="/import-template.csv" download className="text-sm text-navy-700 hover:underline font-medium">
-          ⬇ Download CSV template
-        </a>
+    <>
+      <PageHeader title="Import" description="Bulk-add applicants from a CSV. Each row becomes an approved record." />
+      <div className="grid items-start gap-3 lg:grid-cols-2">
+        <Panel title="Upload CSV" actions={<a href="/import-template.csv" download className="inline-flex items-center gap-1 text-xs font-medium text-clay-600 hover:underline"><Icon name="arrowDown" size={12} /> Template</a>}>
+          <form onSubmit={handleUpload} className="space-y-3">
+            <FileDrop accept=".csv" file={file} onFile={setFile} label="Choose CSV" />
+            {error && <Notice tone="error">{error}</Notice>}
+            <button className="btn-gold" disabled={uploading || !file}>{uploading ? "Importing…" : "Import"}</button>
+          </form>
+        </Panel>
 
-        <form onSubmit={handleUpload} className="mt-5 space-y-4">
-          <div>
-            <label className="label">CSV File</label>
-            <input
-              type="file"
-              accept=".csv"
-              className="input"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              required
-            />
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button className="btn-gold" disabled={uploading || !file}>
-            {uploading ? "Importing…" : "Import"}
-          </button>
-        </form>
+        {result && (
+          <Panel title="Results" description={`${result.createdCount} created · ${result.skippedCount} skipped`}>
+            <div className="max-h-80 overflow-y-auto rounded-lg border border-line">
+              <table className="w-full text-[13px]">
+                <thead className="sticky top-0 bg-paper-sunk text-left text-[11px] uppercase tracking-wider text-mute">
+                  <tr><th className="px-3 py-2">Row</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Detail</th></tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {result.results.map((r: any) => (
+                    <tr key={r.row}>
+                      <td className="px-3 py-1.5">{r.row}</td>
+                      <td className="px-3 py-1.5"><Chip tone={r.status === "created" ? "good" : "warn"}>{r.status === "created" ? "Created" : "Skipped"}</Chip></td>
+                      <td className="px-3 py-1.5 font-mono text-xs">{r.publicId || r.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        )}
       </div>
-
-      {result && (
-        <div className="card p-6">
-          <h3 className="font-bold text-navy-950 mb-2">Import Results</h3>
-          <p className="text-sm text-gray-700 mb-4">
-            <span className="text-emerald-600 font-semibold">{result.createdCount} created</span>
-            {" · "}
-            <span className="text-amber-600 font-semibold">{result.skippedCount} skipped</span>
-          </p>
-          <div className="max-h-80 overflow-y-auto border rounded-lg">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase sticky top-0">
-                <tr>
-                  <th className="text-left px-3 py-2">Row</th>
-                  <th className="text-left px-3 py-2">Status</th>
-                  <th className="text-left px-3 py-2">Detail</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {result.results.map((r: any) => (
-                  <tr key={r.row}>
-                    <td className="px-3 py-2">{r.row}</td>
-                    <td className="px-3 py-2">
-                      {r.status === "created" ? (
-                        <span className="text-emerald-600">Created</span>
-                      ) : (
-                        <span className="text-amber-600">Skipped</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 font-mono">{r.publicId || r.reason}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

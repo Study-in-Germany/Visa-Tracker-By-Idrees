@@ -1,27 +1,37 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { SITE_NAME } from "@/lib/constants";
-import SiteHeader from "@/components/SiteHeader";
+import AppShell from "@/components/AppShell";
+import RegisterSW from "@/components/RegisterSW";
+import Splash from "@/components/Splash";
+
+const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 
 export const metadata: Metadata = {
-  title: `${SITE_NAME} — Study in Germany`,
+  title: { default: `${SITE_NAME} — Study in Germany`, template: `%s · ${SITE_NAME}` },
   description:
     "Track your German student visa journey with real applicant data — queue movement, processing trends, estimated timelines and outcomes.",
+  applicationName: SITE_NAME,
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Visa Tracker", statusBarStyle: "default" },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f6f2ea",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen flex flex-col">
-        <SiteHeader />
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">{children}</main>
-        <footer className="border-t border-gray-200 py-6 text-center text-xs text-gray-500 space-x-4">
-          <span>{SITE_NAME} · Study in Germany — Community &amp; Guidance</span>
-          <Link href="/admin" className="underline hover:text-gray-700">
-            Admin
-          </Link>
-        </footer>
+    <html lang="en" className={`${sans.variable}`}>
+      <body className="font-sans">
+        <AppShell>{children}</AppShell>
+        <Splash />
+        <RegisterSW />
       </body>
     </html>
   );
