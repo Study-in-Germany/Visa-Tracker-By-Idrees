@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  // Partially-anonymous privacy model: hide real name on public view.
+  // Applicants who chose to stay anonymous keep their name hidden on the public view.
   const display = applicants.map((a) => ({
     ...a,
     name: !session && a.isAnonymous ? null : a.name,
@@ -124,10 +124,12 @@ export async function POST(req: NextRequest) {
           waitingListDate: data.waitingListDate ? new Date(data.waitingListDate) : null,
           submissionInviteDate: data.submissionInviteDate ? new Date(data.submissionInviteDate) : null,
           documentSubmissionDate: data.documentSubmissionDate ? new Date(data.documentSubmissionDate) : null,
-          isAnonymous: data.isAnonymous ?? true,
+          appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
+          interviewDate: data.interviewDate ? new Date(data.interviewDate) : null,
+          decisionDate: data.decisionDate ? new Date(data.decisionDate) : null,
+          isAnonymous: data.isAnonymous ?? false,
           approval: "PENDING_REVIEW",
           visaStatus: "WAITING_LIST",
-          // access code hash stored on the applicant record via a raw update below
           history: {
             create: [{ visaStatus: "WAITING_LIST", note: "Entry submitted by applicant" }],
           },
