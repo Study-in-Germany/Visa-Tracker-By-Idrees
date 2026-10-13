@@ -21,6 +21,9 @@ export const submitApplicantSchema = z.object({
   waitingListDate: optionalDate,
   submissionInviteDate: optionalDate,
   documentSubmissionDate: optionalDate,
+  appointmentDate: optionalDate,
+  interviewDate: optionalDate,
+  decisionDate: optionalDate,
   isAnonymous: z.boolean().optional(),
 });
 
