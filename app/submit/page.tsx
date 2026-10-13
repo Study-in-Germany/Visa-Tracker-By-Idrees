@@ -7,9 +7,9 @@ import { CONSULATES, GENDER_LABELS } from "@/lib/constants";
 const initialForm = {
   name: "", email: "", gender: "", city: "", province: "",
   university: "", program: "", intake: "", visaType: "",
-  consulate: "Islamabad", waitingListCategory: "", sourceOfInformation: "",
+  consulate: "Islamabad", sourceOfInformation: "",
   additionalDocuments: "", waitingListDate: "", submissionInviteDate: "",
-  documentSubmissionDate: "", isAnonymous: true,
+  documentSubmissionDate: "", appointmentDate: "", interviewDate: "", decisionDate: "",
 };
 
 export default function SubmitPage() {
@@ -29,7 +29,7 @@ export default function SubmitPage() {
     const res = await fetch("/api/applicants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, isAnonymous: false }),
     });
     const data = await res.json();
     setLoading(false);
@@ -68,7 +68,7 @@ export default function SubmitPage() {
         <h1 className="text-2xl font-bold text-navy-950">Submit Your Visa Journey</h1>
         <p className="text-gray-600 text-sm mt-1">
           Your entry stays private until an admin reviews and approves it. Once approved, it
-          appears on the public tracker in a partially-anonymous form.
+          appears on the public tracker.
         </p>
       </div>
 
@@ -103,7 +103,6 @@ export default function SubmitPage() {
               {CONSULATES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </Field>
-          <Field label="Waiting-List Category"><input className="input" value={form.waitingListCategory} onChange={(e) => update("waitingListCategory", e.target.value)} /></Field>
           <Field label="Waiting-List Registration Date">
             <input type="date" className="input" value={form.waitingListDate} onChange={(e) => update("waitingListDate", e.target.value)} />
           </Field>
@@ -113,6 +112,15 @@ export default function SubmitPage() {
           <Field label="Document Submission Date">
             <input type="date" className="input" value={form.documentSubmissionDate} onChange={(e) => update("documentSubmissionDate", e.target.value)} />
           </Field>
+          <Field label="Appointment Booking Date">
+            <input type="date" className="input" value={form.appointmentDate} onChange={(e) => update("appointmentDate", e.target.value)} />
+          </Field>
+          <Field label="Interview Date">
+            <input type="date" className="input" value={form.interviewDate} onChange={(e) => update("interviewDate", e.target.value)} />
+          </Field>
+          <Field label="Visa Received Date">
+            <input type="date" className="input" value={form.decisionDate} onChange={(e) => update("decisionDate", e.target.value)} />
+          </Field>
         </Fieldset>
 
         <Fieldset title="Additional Info">
@@ -121,11 +129,6 @@ export default function SubmitPage() {
             <textarea className="input" rows={3} value={form.additionalDocuments} onChange={(e) => update("additionalDocuments", e.target.value)} />
           </Field>
         </Fieldset>
-
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={form.isAnonymous} onChange={(e) => update("isAnonymous", e.target.checked)} />
-          Keep my name hidden on the public tracker (recommended)
-        </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
