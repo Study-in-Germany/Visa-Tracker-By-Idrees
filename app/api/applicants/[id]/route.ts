@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { updateApplicantSchema } from "@/lib/validations";
 import { sendStatusUpdateEmail } from "@/lib/email";
+import { isRecordNotFound } from "@/lib/prisma-errors";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
@@ -84,7 +85,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ? { history: { create: [{ visaStatus: data.visaStatus as any, note: data.statusNote || null }] } }
         : {}),
     },
+  }).catch((error: unknown) => {
+    if (isRecordNotFound(error)) return null;
+    throw error;
   });
+  // Deletion may have happened after the initial read.
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (statusChanged) {
     await sendStatusUpdateEmail({
@@ -102,6 +108,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await prisma.applicant.delete({ where: { id: params.id } });
+  const result = await prisma.applicant.deleteMany({
+    where: { id: params.id },
+  });
+  if (!result.count) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

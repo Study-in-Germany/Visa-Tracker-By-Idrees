@@ -1,7 +1,7 @@
 // Local development only. Creates one demo applicant so the applicant sign-in can be tried at any time.
 //   Tracking ID: DEMO-0001   Access code: DEMO-1234
 // Run with: npm run seed:demo
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/db";
 import bcrypt from "bcryptjs";
 
 if (process.env.NODE_ENV === "production") {
@@ -9,7 +9,6 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const prisma = new PrismaClient();
 const day = (s: string) => new Date(`${s}T00:00:00Z`);
 
 async function main() {
@@ -36,6 +35,10 @@ async function main() {
     isAnonymous: true,
   };
   const existing = await prisma.applicant.findUnique({ where: { publicId } });
+  if (!existing && await prisma.applicant.findFirst({ where: { publicId, deletedAt: { not: null } } })) {
+    console.log("Demo applicant is soft-deleted; leaving it unchanged.");
+    return;
+  }
   if (existing) {
     await prisma.applicant.update({ where: { publicId }, data });
     console.log("Demo applicant updated.");

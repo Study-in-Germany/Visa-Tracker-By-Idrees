@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getApplicantSession } from "@/lib/auth";
 import { updateApplicantSchema } from "@/lib/validations";
+import { isRecordNotFound } from "@/lib/prisma-errors";
 
 export async function GET() {
   const session = await getApplicantSession();
@@ -23,6 +24,12 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   const session = await getApplicantSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const applicant = await prisma.applicant.findUnique({
+    where: { id: session.applicantId },
+    select: { id: true },
+  });
+  if (!applicant) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
@@ -58,7 +65,11 @@ export async function PATCH(req: NextRequest) {
       interviewDate: dateField(data.interviewDate),
       decisionDate: dateField(data.decisionDate),
     },
+  }).catch((error: unknown) => {
+    if (isRecordNotFound(error)) return null;
+    throw error;
   });
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const { accessCodeHash, ...safe } = updated;
   return NextResponse.json({ applicant: safe });

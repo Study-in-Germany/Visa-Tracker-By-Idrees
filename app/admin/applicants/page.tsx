@@ -27,6 +27,8 @@ const APPROVAL_OPTIONS = [{ value: "", label: "All reviews" }, ...Object.entries
 function ApplicantsInner() {
   const sp = useSearchParams();
   const [approval, setApproval] = useState(sp.get("approval") || "");
+  const [view, setView] = useState("active");
+  const deletedOnly = view === "deleted";
   const [consulate, setConsulate] = useState("");
   const [university, setUniversity] = useState("");
   const [visaStatus, setVisaStatus] = useState("");
@@ -38,7 +40,7 @@ function ApplicantsInner() {
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const q = useDebounced(search.trim());
-  const filters = useMemo(() => ({ q, approval, consulate, university, visaStatus, from: period.from, to: period.to }), [q, approval, consulate, university, visaStatus, period]);
+  const filters = useMemo(() => ({ q, approval, consulate, university, visaStatus, deleted: deletedOnly ? "true" : undefined, from: period.from, to: period.to }), [q, approval, consulate, university, visaStatus, deletedOnly, period]);
   useEffect(() => setPage(1), [filters]);
 
   const { data, error, loading, reload } = useApplicants(filters, page, sort);
@@ -62,7 +64,7 @@ function ApplicantsInner() {
     act(a.id, () => apiFetch(`/api/applicants/${a.id}`, jsonInit("PATCH", { approval: next })), `${a.publicId} marked ${APPROVAL_LABELS[next].toLowerCase()}.`);
 
   const remove = (a: ApplicantRow) => {
-    if (!confirm(`Delete ${a.publicId} permanently? This cannot be undone.`)) return;
+    if (!confirm(`Delete ${a.publicId}? It will be hidden and applicant access will be disabled. You can restore it from Deleted entries.`)) return;
     act(a.id, () => apiFetch(`/api/applicants/${a.id}`, { method: "DELETE" }), `${a.publicId} deleted.`);
   };
 
@@ -73,7 +75,7 @@ function ApplicantsInner() {
       sortKey: "publicId",
       mobile: "title",
       cell: (a) => (
-        <Link href={`/admin/applicants/${a.id}`} className="font-mono font-medium hover:text-clay-600 hover:underline">
+        deletedOnly ? <span className="font-mono font-medium">{a.publicId}</span> : <Link href={`/admin/applicants/${a.id}`} className="font-mono font-medium hover:text-clay-600 hover:underline">
           {a.publicId}
         </Link>
       ),
@@ -84,6 +86,7 @@ function ApplicantsInner() {
     { key: "status", header: "Visa status", sortKey: "visaStatus", cell: (a) => <StatusBadge status={a.visaStatus} />, filter: { type: "select", label: "Visa status", value: visaStatus, options: VISA_STATUS_OPTIONS, onChange: setVisaStatus } },
     { key: "review", header: "Review", mobile: "badge", cell: (a) => <Chip className={APPROVAL_COLORS[a.approval || ""]}>{APPROVAL_LABELS[a.approval || ""] || a.approval}</Chip>, filter: { type: "select", label: "Review state", value: approval, options: APPROVAL_OPTIONS.filter((o) => o.value), onChange: setApproval } },
     { key: "submitted", header: "Submitted", sortKey: "createdAt", hideBelow: "xl", cell: (a) => fmtDate(a.createdAt) },
+    ...(deletedOnly ? [{ key: "deleted", header: "Deleted", cell: (a: ApplicantRow) => fmtDate(a.deletedAt) }] : []),
   ];
 
   const btn = "inline-flex min-h-[30px] items-center rounded-md px-2 text-xs font-semibold disabled:opacity-50";
@@ -95,6 +98,7 @@ function ApplicantsInner() {
         description="Review submissions and manage records."
         actions={
           <>
+            <Select variant="pill" label="Entry visibility" value={view} onChange={setView} options={[{ value: "active", label: "Current entries" }, { value: "deleted", label: "Deleted entries" }]} className="w-full sm:w-auto" />
             <DateRangePicker value={period} onChange={setPeriod} label="Waiting list" />
             <Select variant="pill" label="Review state" prefix="Review" value={approval} onChange={setApproval} options={APPROVAL_OPTIONS} className="w-full sm:w-auto" />
             <Select variant="pill" label="Embassy" prefix="Embassy" value={consulate} onChange={setConsulate} options={CONSULATE_OPTIONS} className="w-full sm:w-auto" />
@@ -121,21 +125,23 @@ function ApplicantsInner() {
         <DataTable
           embedded
           caption="Applicants"
-          rowHref={(a) => `/admin/applicants/${a.id}`}
+          rowHref={deletedOnly ? undefined : (a) => `/admin/applicants/${a.id}`}
           columns={columns}
-          rows={data?.applicants ?? []}
+          rows={(data?.applicants ?? []).filter((a) => !!a.deletedAt === deletedOnly)}
           rowKey={(a) => a.id}
           loading={loading}
           error={error}
           onRetry={reload}
-          emptyTitle={hasFilters ? "No applicants match these filters" : "No applicants yet"}
+          emptyTitle={hasFilters ? "No applicants match these filters" : deletedOnly ? "No deleted entries" : "No applicants yet"}
           sort={sort}
           onSort={(s) => { setSort(s); setPage(1); }}
           page={data?.page ?? page}
           pageCount={data?.pageCount ?? 1}
           total={data?.count}
           onPage={setPage}
-          actions={(a) => (
+          actions={(a) => deletedOnly ? (
+            <button disabled={busyId !== null} onClick={() => act(a.id, () => apiFetch(`/api/applicants/${a.id}/restore`, { method: "POST" }), `${a.publicId} restored.`)} className={`${btn} text-emerald-800 hover:bg-emerald-50`}>Restore</button>
+          ) : (
             <>
               {a.approval !== "APPROVED" && <button disabled={busyId === a.id} onClick={() => setApprovalFor(a, "APPROVED")} className={`${btn} text-emerald-800 hover:bg-emerald-50`}>Approve</button>}
               {a.approval !== "REJECTED" && <button disabled={busyId === a.id} onClick={() => setApprovalFor(a, "REJECTED")} className={`${btn} text-red-800 hover:bg-red-50`}>Reject</button>}

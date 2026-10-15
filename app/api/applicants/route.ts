@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { submitApplicantSchema } from "@/lib/validations";
 import { getSession } from "@/lib/auth";
-import { buildPublicId, generateAccessCode } from "@/lib/ids";
+import { generateAccessCode } from "@/lib/ids";
+import { createApplicantWithTrackingId } from "@/lib/create-applicant";
 import bcrypt from "bcryptjs";
 import { waitingListWhere } from "@/lib/period";
 import { VISA_STATUS_LABELS } from "@/lib/constants";
@@ -27,6 +28,10 @@ const SORTABLE = new Set(["publicId", "university", "consulate", "waitingListDat
 export async function GET(req: NextRequest) {
   const session = await getSession();
   const { searchParams } = new URL(req.url);
+  const deletedOnly = searchParams.get("deleted") === "true";
+  if (deletedOnly && !session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const university = searchParams.get("university") || undefined;
   const visaStatus = searchParams.get("visaStatus") || undefined;
@@ -41,7 +46,7 @@ export async function GET(req: NextRequest) {
   const sortParam = searchParams.get("sort") || "";
   const dir = searchParams.get("dir") === "desc" ? "desc" : "asc";
 
-  const where: any = {};
+  const where: any = { deletedAt: deletedOnly ? { not: null } : null };
 
   if (session) {
     if (approvalParam) where.approval = approvalParam;
@@ -112,6 +117,7 @@ export async function GET(req: NextRequest) {
       approval: true,
       isAnonymous: true,
       createdAt: true,
+      ...(session ? { deletedAt: true } : {}),
     },
     }),
   ]);
@@ -147,54 +153,34 @@ export async function POST(req: NextRequest) {
   const accessCode = generateAccessCode();
   const accessCodeHash = await bcrypt.hash(accessCode, 10);
 
-  // Retry a couple of times in case of a rare publicId collision.
-  let applicant = null;
-  for (let attempt = 0; attempt < 5 && !applicant; attempt++) {
-    const countForConsulate = await prisma.applicant.count({
-      where: { consulate: data.consulate },
-    });
-    const candidateId = buildPublicId(data.consulate, 10000 + countForConsulate + attempt);
-    try {
-      applicant = await prisma.applicant.create({
-        data: {
-          publicId: candidateId,
-          accessCodeHash,
-          name: data.name,
-          email: data.email || null,
-          gender: (data.gender as any) || null,
-          city: data.city || null,
-          province: data.province || null,
-          university: data.university || null,
-          program: data.program || null,
-          intake: data.intake || null,
-          visaType: data.visaType || null,
-          consulate: data.consulate,
-          waitingListCategory: data.waitingListCategory || null,
-          sourceOfInformation: data.sourceOfInformation || null,
-          additionalDocuments: data.additionalDocuments || null,
-          waitingListDate: data.waitingListDate ? new Date(data.waitingListDate) : null,
-          submissionInviteDate: data.submissionInviteDate ? new Date(data.submissionInviteDate) : null,
-          documentSubmissionDate: data.documentSubmissionDate ? new Date(data.documentSubmissionDate) : null,
-          appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
-          interviewDate: data.interviewDate ? new Date(data.interviewDate) : null,
-          decisionDate: data.decisionDate ? new Date(data.decisionDate) : null,
-          isAnonymous: data.isAnonymous ?? false,
-          approval: "PENDING_REVIEW",
-          visaStatus: "WAITING_LIST",
-          history: {
-            create: [{ visaStatus: "WAITING_LIST", note: "Entry submitted by applicant" }],
-          },
-        },
-      });
-    } catch (err: any) {
-      if (err?.code === "P2002") continue; // unique constraint clash, retry
-      throw err;
-    }
-  }
-
-  if (!applicant) {
-    return NextResponse.json({ error: "Could not allocate a tracking ID, please try again" }, { status: 500 });
-  }
+  const applicant = await createApplicantWithTrackingId({
+    accessCodeHash,
+    name: data.name,
+    email: data.email || null,
+    gender: (data.gender as any) || null,
+    city: data.city || null,
+    province: data.province || null,
+    university: data.university || null,
+    program: data.program || null,
+    intake: data.intake || null,
+    visaType: data.visaType || null,
+    consulate: data.consulate,
+    waitingListCategory: data.waitingListCategory || null,
+    sourceOfInformation: data.sourceOfInformation || null,
+    additionalDocuments: data.additionalDocuments || null,
+    waitingListDate: data.waitingListDate ? new Date(data.waitingListDate) : null,
+    submissionInviteDate: data.submissionInviteDate ? new Date(data.submissionInviteDate) : null,
+    documentSubmissionDate: data.documentSubmissionDate ? new Date(data.documentSubmissionDate) : null,
+    appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
+    interviewDate: data.interviewDate ? new Date(data.interviewDate) : null,
+    decisionDate: data.decisionDate ? new Date(data.decisionDate) : null,
+    isAnonymous: data.isAnonymous ?? false,
+    approval: "PENDING_REVIEW",
+    visaStatus: "WAITING_LIST",
+    history: {
+      create: [{ visaStatus: "WAITING_LIST", note: "Entry submitted by applicant" }],
+    },
+  });
 
   return NextResponse.json(
     {
