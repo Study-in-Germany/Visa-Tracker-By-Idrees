@@ -35,10 +35,6 @@ async function main() {
     isAnonymous: true,
   };
   const existing = await prisma.applicant.findUnique({ where: { publicId } });
-  if (!existing && await prisma.applicant.findFirst({ where: { publicId, deletedAt: { not: null } } })) {
-    console.log("Demo applicant is soft-deleted; leaving it unchanged.");
-    return;
-  }
   if (existing) {
     await prisma.applicant.update({ where: { publicId }, data });
     console.log("Demo applicant updated.");

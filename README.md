@@ -134,28 +134,3 @@ This is an independent, community-run project. It is not affiliated with,
 endorsed by, or connected to the German Federal Foreign Office or any German
 consulate. All timeline estimates are unofficial and for general guidance
 only.
-
-## Soft deletion
-
-Applicants and announcements are soft deleted using `prisma-extension-soft-delete`.
-Deleted applicants cannot log in or update their records. Normal queries exclude
-deleted records; history and unique tracking IDs remain stored. There is no new
-restore or purge workflow.
-
-For an existing database, apply the additive schema change before deploying:
-
-```bash
-npx prisma db execute --file prisma/soft-delete.sql --schema prisma/schema.prisma
-```
-
-Apply this SQL once; fresh databases can continue using the existing `db push`
-setup. Regenerate Prisma Client after schema changes. The shared client guards
-unique updates/upserts as well as the extension's default read/bulk-update filters.
-Explicit `deletedAt` filters are reserved for trusted maintenance, never request
-input. In interactive transactions use explicit `update`/`updateMany` and
-`findFirst` operations: the dependency rewrites deletes and unique reads using
-its captured client, which can escape the transaction context.
-
-Run the PostgreSQL regression suite with
-`TEST_DATABASE_URL=postgresql://... npm test`. Tests create and remove their own
-schema, leaving existing records untouched.
