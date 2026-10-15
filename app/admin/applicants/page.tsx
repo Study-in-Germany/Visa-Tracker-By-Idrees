@@ -62,7 +62,7 @@ function ApplicantsInner() {
     act(a.id, () => apiFetch(`/api/applicants/${a.id}`, jsonInit("PATCH", { approval: next })), `${a.publicId} marked ${APPROVAL_LABELS[next].toLowerCase()}.`);
 
   const remove = (a: ApplicantRow) => {
-    if (!confirm(`Delete ${a.publicId}? This will hide the entry and disable applicant access.`)) return;
+    if (!confirm(`Delete ${a.publicId} permanently? This cannot be undone.`)) return;
     act(a.id, () => apiFetch(`/api/applicants/${a.id}`, { method: "DELETE" }), `${a.publicId} deleted.`);
   };
 

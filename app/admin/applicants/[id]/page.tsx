@@ -73,7 +73,7 @@ export default function AdminApplicantEditPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this applicant? This will hide the entry and disable applicant access.")) return;
+    if (!confirm("Delete this applicant record permanently? This cannot be undone.")) return;
     try {
       await apiFetch(`/api/applicants/${id}`, { method: "DELETE" });
       router.push("/admin/applicants");
