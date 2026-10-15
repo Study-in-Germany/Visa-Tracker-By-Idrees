@@ -21,12 +21,14 @@ describe("soft deletion (PostgreSQL)", { skip: !testDatabaseUrl }, () => {
   let list: typeof import("../app/api/applicants/route").GET;
   let details: typeof import("../app/api/applicants/[id]/route");
   let login: typeof import("../app/api/applicant/login/route").POST;
+  let adminLogin: typeof import("../app/api/admin/login/route").POST;
   let me: typeof import("../app/api/applicant/me/route");
   let analytics: typeof import("../app/api/analytics/route").GET;
   let announcements: typeof import("../app/api/announcements/route");
   let announcementDetails: typeof import("../app/api/announcements/[id]/route");
   let auth: typeof import("../lib/auth");
   let adminCookie: string;
+  let adminPasswordHash: string;
 
   const inRequest = <T>(cookie: string, callback: () => T) =>
     RequestAsyncStorageWrapper.wrap(requestAsyncStorage, {
@@ -55,6 +57,7 @@ describe("soft deletion (PostgreSQL)", { skip: !testDatabaseUrl }, () => {
     list = (await import("../app/api/applicants/route")).GET;
     details = await import("../app/api/applicants/[id]/route");
     login = (await import("../app/api/applicant/login/route")).POST;
+    adminLogin = (await import("../app/api/admin/login/route")).POST;
     me = await import("../app/api/applicant/me/route");
     analytics = (await import("../app/api/analytics/route")).GET;
     announcements = await import("../app/api/announcements/route");
@@ -62,12 +65,17 @@ describe("soft deletion (PostgreSQL)", { skip: !testDatabaseUrl }, () => {
     auth = await import("../lib/auth");
     process.env.AUTH_SECRET = "tracking-id-tests-only-secret";
     adminCookie = `${auth.SESSION_COOKIE_NAME}=${await auth.createSessionToken("admin@example.test")}`;
+    adminPasswordHash = await bcrypt.hash("test-admin-password", 4);
   });
 
   beforeEach(async () => {
     sequence = 10000;
     await raw.applicant.deleteMany();
     await raw.announcement.deleteMany();
+    await raw.adminUser.deleteMany();
+    await raw.adminUser.create({
+      data: { email: "admin@example.test", passwordHash: adminPasswordHash },
+    });
   });
 
   after(async () => {
@@ -216,6 +224,95 @@ describe("soft deletion (PostgreSQL)", { skip: !testDatabaseUrl }, () => {
     });
     assert.equal((await db.applicant.findUniqueOrThrow({ where: { id: applicant.id } })).deletedAt, null);
     assert.equal((await createApplicant(applicantData())).publicId, "PK-ISB-10001");
+  });
+
+  it("soft deletes status events through nested and bulk deletes, filters history, and allows explicit restore", async () => {
+    const applicant = await createApplicant(applicantData());
+    const original = await db.statusEvent.findFirstOrThrow({ where: { applicantId: applicant.id } });
+    const active = await db.statusEvent.create({
+      data: { applicantId: applicant.id, visaStatus: "PROCESSING", note: "Active event" },
+    });
+
+    await db.applicant.update({
+      where: { id: applicant.id }, data: { history: { delete: { id: original.id } } },
+    });
+    const retained = await raw.statusEvent.findUniqueOrThrow({ where: { id: original.id } });
+    assert.ok(retained.deletedAt);
+    assert.equal(retained.applicantId, applicant.id);
+    assert.equal(retained.note, "Test entry");
+    assert.equal(await db.statusEvent.findUnique({ where: { id: original.id } }), null);
+    assert.equal(await db.statusEvent.count(), 1);
+    assert.deepEqual((await db.applicant.findUniqueOrThrow({
+      where: { id: applicant.id }, include: { history: true },
+    })).history.map((event) => event.id), [active.id]);
+    assert.deepEqual((await db.applicant.findFirstOrThrow({
+      where: { id: applicant.id }, select: { history: { select: { id: true } } },
+    })).history, [{ id: active.id }]);
+
+    await assert.rejects(db.statusEvent.update({
+      where: { id: original.id, deletedAt: undefined }, data: { note: "Changed" },
+    }), { code: "P2025" });
+    await assert.rejects(db.statusEvent.upsert({
+      where: { id: original.id },
+      create: { id: original.id, applicantId: applicant.id, visaStatus: "WAITING_LIST" },
+      update: { note: "Changed", deletedAt: null },
+    }), { code: "P2002" });
+    assert.equal((await db.statusEvent.updateMany({ data: { note: "Updated active event" } })).count, 1);
+    assert.equal((await raw.statusEvent.findUniqueOrThrow({ where: { id: original.id } })).note, "Test entry");
+
+    await db.statusEvent.update({
+      where: { id: original.id, deletedAt: { not: null } }, data: { deletedAt: null },
+    });
+    assert.equal(await db.statusEvent.count(), 2);
+    assert.equal((await db.statusEvent.deleteMany({ where: { applicantId: applicant.id } })).count, 2);
+    assert.equal(await db.statusEvent.count(), 0);
+    assert.equal(await raw.statusEvent.count(), 2);
+    assert.deepEqual((await db.applicant.findUniqueOrThrow({
+      where: { id: applicant.id }, include: { history: true },
+    })).history, []);
+  });
+
+  it("retains deleted admins, blocks login and existing sessions, and permits explicit restore", async () => {
+    const admin = await db.adminUser.findUniqueOrThrow({ where: { email: "admin@example.test" } });
+    const loginRequest = () => request("/api/admin/login", "POST", {
+      email: admin.email, password: "test-admin-password",
+    });
+    const createNotice = () => inRequest(adminCookie, () => announcements.POST(
+      request("/api/announcements", "POST", { title: "Notice", body: "Details" }),
+    ));
+    assert.equal((await adminLogin(loginRequest())).status, 200);
+    assert.equal((await createNotice()).status, 201);
+    await db.adminUser.delete({ where: { id: admin.id } });
+    const retained = await raw.adminUser.findUniqueOrThrow({ where: { id: admin.id } });
+    assert.ok(retained.deletedAt);
+    assert.equal(retained.passwordHash, adminPasswordHash);
+    assert.equal(await db.adminUser.findUnique({ where: { email: admin.email } }), null);
+    assert.equal(await db.adminUser.count(), 0);
+    const response = await adminLogin(loginRequest());
+    assert.equal(response.status, 401);
+    assert.equal(response.headers.has("set-cookie"), false);
+    assert.equal((await createNotice()).status, 401);
+    assert.equal(await raw.announcement.count(), 1);
+
+    await assert.rejects(db.adminUser.update({
+      where: { id: admin.id }, data: { passwordHash: "Changed" },
+    }), { code: "P2025" });
+    assert.equal((await db.adminUser.updateMany({ data: { passwordHash: "Changed" } })).count, 0);
+    await assert.rejects(db.adminUser.upsert({
+      where: { email: admin.email },
+      create: { email: admin.email, passwordHash: "Changed" },
+      update: { passwordHash: "Changed", deletedAt: null },
+    }), { code: "P2002" });
+    assert.equal((await raw.adminUser.findUniqueOrThrow({ where: { id: admin.id } })).passwordHash, adminPasswordHash);
+
+    await db.adminUser.update({
+      where: { id: admin.id, deletedAt: { not: null } }, data: { deletedAt: null },
+    });
+    assert.equal((await adminLogin(loginRequest())).status, 200);
+    assert.equal((await createNotice()).status, 201);
+    assert.equal((await db.adminUser.deleteMany()).count, 1);
+    assert.equal(await db.adminUser.count(), 0);
+    assert.equal(await raw.adminUser.count(), 1);
   });
 
   it("protects unique updates and upserts against silently changing deleted records", async () => {

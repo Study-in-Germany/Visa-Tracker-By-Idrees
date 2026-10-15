@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { submitApplicantSchema } from "@/lib/validations";
-import { getSession } from "@/lib/auth";
+import { getSession } from "@/lib/admin-session";
 import { buildPublicId, generateAccessCode } from "@/lib/ids";
 import bcrypt from "bcryptjs";
 import { waitingListWhere } from "@/lib/period";
@@ -150,7 +150,6 @@ export async function POST(req: NextRequest) {
   // Retry a couple of times in case of a rare publicId collision.
   let applicant = null;
   for (let attempt = 0; attempt < 5 && !applicant; attempt++) {
-    // Retained entries still own their IDs; include them in the allocation count.
     const countForConsulate = await prisma.applicant.count({
       where: { consulate: data.consulate, deletedAt: {} },
     });

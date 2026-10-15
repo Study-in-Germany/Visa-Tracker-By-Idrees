@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession } from "@/lib/admin-session";
 import { parseCSV } from "@/lib/csv";
 import { buildPublicId, generateAccessCode } from "@/lib/ids";
 import { CONSULATES, VISA_STATUS_LABELS, VISA_STATUS_ORDER, GENDER_LABELS } from "@/lib/constants";
@@ -94,7 +94,6 @@ export async function POST(req: NextRequest) {
   const results: Array<{ row: number; status: string; reason?: string; publicId?: string }> = [];
 
   const consulateCounts: Record<string, number> = {};
-  // Include retained entries so imports cannot reuse their tracking IDs.
   for (const c of CONSULATES) {
     consulateCounts[c] = await prisma.applicant.count({ where: { consulate: c, deletedAt: {} } });
   }

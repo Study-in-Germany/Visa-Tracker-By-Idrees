@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession } from "@/lib/admin-session";
 import { updateApplicantSchema } from "@/lib/validations";
 import { sendStatusUpdateEmail } from "@/lib/email";
 import { isRecordNotFound } from "@/lib/prisma-errors";
