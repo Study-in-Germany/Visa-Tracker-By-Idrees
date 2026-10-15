@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { parseCSV } from "@/lib/csv";
-import { generateAccessCode } from "@/lib/ids";
-import { createApplicantWithTrackingId } from "@/lib/create-applicant";
+import { buildPublicId, generateAccessCode } from "@/lib/ids";
 import { CONSULATES, VISA_STATUS_LABELS, VISA_STATUS_ORDER, GENDER_LABELS } from "@/lib/constants";
 
 const DATE_COLUMNS: Record<string, string> = {
@@ -93,6 +93,12 @@ export async function POST(req: NextRequest) {
 
   const results: Array<{ row: number; status: string; reason?: string; publicId?: string }> = [];
 
+  const consulateCounts: Record<string, number> = {};
+  // Include retained entries so imports cannot reuse their tracking IDs.
+  for (const c of CONSULATES) {
+    consulateCounts[c] = await prisma.applicant.count({ where: { consulate: c, deletedAt: {} } });
+  }
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const name = (row["Name"] || "").trim();
@@ -112,45 +118,67 @@ export async function POST(req: NextRequest) {
       dateFields[field] = parseDate(row[csvCol]);
     }
 
-    try {
-      const created = await createApplicantWithTrackingId({
-        accessCodeHash: accessCodeHash,
-        name: name,
-        email: row["Email"] || null,
-        gender: (matchGender(row["Gender"]) as any) || null,
-        city: row["City"] || null,
-        province: row["Province"] || null,
-        university: row["University"] || null,
-        program: row["Program"] || null,
-        intake: row["Intake"] || null,
-        visaType: row["VisaType"] || null,
-        consulate: consulate,
-        waitingListCategory: row["WaitingListCategory"] || null,
-        sourceOfInformation: row["SourceOfInformation"] || null,
-        additionalDocuments: row["AdditionalDocuments"] || null,
-        isAnonymous: parseBool(row["Anonymous"], true),
-        approval: "APPROVED",
-        visaStatus: matchVisaStatus(row["VisaStatus"]) as any,
-        waitingListDate: dateFields["waitingListDate"],
-        submissionInviteDate: dateFields["submissionInviteDate"],
-        documentSubmissionDate: dateFields["documentSubmissionDate"],
-        correctionRequestDate: dateFields["correctionRequestDate"],
-        correctionSubmittedDate: dateFields["correctionSubmittedDate"],
-        appointmentDate: dateFields["appointmentDate"],
-        interviewDate: dateFields["interviewDate"],
-        decisionDate: dateFields["decisionDate"],
-        history: {
-          create: [
-            {
-              visaStatus: matchVisaStatus(row["VisaStatus"]) as any,
-              note: "Imported via CSV",
+    let created = null;
+    for (let attempt = 0; attempt < 5 && !created; attempt++) {
+      const candidateId = buildPublicId(consulate, 10000 + consulateCounts[consulate] + attempt);
+      try {
+        created = await prisma.applicant.create({
+          data: {
+            publicId: candidateId,
+            accessCodeHash: accessCodeHash,
+            name: name,
+            email: row["Email"] || null,
+            gender: (matchGender(row["Gender"]) as any) || null,
+            city: row["City"] || null,
+            province: row["Province"] || null,
+            university: row["University"] || null,
+            program: row["Program"] || null,
+            intake: row["Intake"] || null,
+            visaType: row["VisaType"] || null,
+            consulate: consulate,
+            waitingListCategory: row["WaitingListCategory"] || null,
+            sourceOfInformation: row["SourceOfInformation"] || null,
+            additionalDocuments: row["AdditionalDocuments"] || null,
+            isAnonymous: parseBool(row["Anonymous"], true),
+            approval: "APPROVED",
+            visaStatus: matchVisaStatus(row["VisaStatus"]) as any,
+            waitingListDate: dateFields["waitingListDate"],
+            submissionInviteDate: dateFields["submissionInviteDate"],
+            documentSubmissionDate: dateFields["documentSubmissionDate"],
+            correctionRequestDate: dateFields["correctionRequestDate"],
+            correctionSubmittedDate: dateFields["correctionSubmittedDate"],
+            appointmentDate: dateFields["appointmentDate"],
+            interviewDate: dateFields["interviewDate"],
+            decisionDate: dateFields["decisionDate"],
+            history: {
+              create: [
+                {
+                  visaStatus: matchVisaStatus(row["VisaStatus"]) as any,
+                  note: "Imported via CSV",
+                },
+              ],
             },
-          ],
-        },
-      });
+          },
+        });
+      } catch (err: any) {
+        if (err && err.code === "P2002") {
+          continue;
+        }
+        results.push({ row: i + 2, status: "skipped", reason: "Database error" });
+        break;
+      }
+    }
+
+    if (created) {
+      consulateCounts[consulate] = consulateCounts[consulate] + 1;
       results.push({ row: i + 2, status: "created", publicId: created.publicId });
-    } catch {
-      results.push({ row: i + 2, status: "skipped", reason: "Database error" });
+    } else {
+      const alreadyLogged = results.find(function (r) {
+        return r.row === i + 2;
+      });
+      if (!alreadyLogged) {
+        results.push({ row: i + 2, status: "skipped", reason: "Could not allocate tracking ID" });
+      }
     }
   }
 

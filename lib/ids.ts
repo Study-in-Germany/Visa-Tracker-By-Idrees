@@ -1,13 +1,9 @@
 import { CONSULATE_CODES } from "@/lib/constants";
 
-export function getPublicIdPrefix(consulate: string) {
-  const code = CONSULATE_CODES[consulate] || "GEN";
-  return `PK-${code}-`;
-}
-
 // Builds a public tracking code like PK-ISB-10482
-export function buildPublicId(consulate: string, sequence: number | bigint) {
-  return `${getPublicIdPrefix(consulate)}${String(sequence).padStart(5, "0")}`;
+export function buildPublicId(consulate: string, sequence: number) {
+  const code = CONSULATE_CODES[consulate] || "GEN";
+  return `PK-${code}-${String(sequence).padStart(5, "0")}`;
 }
 
 // Generates a short, easy-to-share access code for applicant self-login,

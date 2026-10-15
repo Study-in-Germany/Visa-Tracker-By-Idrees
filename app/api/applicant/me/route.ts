@@ -25,12 +25,6 @@ export async function PATCH(req: NextRequest) {
   const session = await getApplicantSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const applicant = await prisma.applicant.findUnique({
-    where: { id: session.applicantId },
-    select: { id: true },
-  });
-  if (!applicant) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
 

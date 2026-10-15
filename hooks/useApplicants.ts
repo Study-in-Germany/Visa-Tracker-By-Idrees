@@ -10,7 +10,6 @@ export type ApplicantFilters = {
   consulate?: string;
   visaStatus?: string;
   approval?: string;
-  deleted?: string;
   from?: string;
   to?: string;
 };

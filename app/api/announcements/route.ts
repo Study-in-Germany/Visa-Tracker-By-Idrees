@@ -3,13 +3,8 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { announcementSchema } from "@/lib/validations";
 
-export async function GET(req: NextRequest) {
-  const deletedOnly = req.nextUrl.searchParams.get("deleted") === "true";
-  if (deletedOnly && !await getSession()) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function GET() {
   const announcements = await prisma.announcement.findMany({
-    where: { deletedAt: deletedOnly ? { not: null } : null },
     orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
   });
   return NextResponse.json({ announcements });

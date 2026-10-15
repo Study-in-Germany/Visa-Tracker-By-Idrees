@@ -55,7 +55,7 @@ EMAIL_FROM=            # optional
 
 ```bash
 npm install
-npm run db:migrate:deploy   # creates tables using versioned migrations
+npx prisma db push        # creates all tables in your database
 npm run seed               # creates your admin login
 npm run dev                 # http://localhost:3000
 ```
@@ -69,33 +69,6 @@ Log in at `/admin/login` with the email/password from `SEED_ADMIN_EMAIL` /
 > internet access — it will work on your own machine and on Vercel's build
 > servers, but will fail in network-locked sandboxes.
 
-## Run locally with Docker
-
-```bash
-docker compose up --build -d app
-```
-
-Open http://localhost:3000. Compose starts PostgreSQL, applies migrations, and runs
-the development app. Database data persists in a named volume. Use `APP_PORT=3001`
-before the command if port 3000 is already in use. Bundled credentials and the
-default auth secret are for local development.
-
-```bash
-docker compose --profile test run --build --rm test
-docker compose --profile test down
-```
-
-Tests use their own database and temporary schemas. Existing databases created
-with `db push` must be baselined before using the migration-based startup; see
-[the migration and soft-delete guide](docs/soft-delete.md).
-
-## Soft deletion
-
-Deleting an applicant or announcement hides it while preserving its record.
-Admins can restore it from the deleted-record view. Deleted applicants cannot
-log in or update records; their tracking IDs remain reserved. See
-[soft-delete behavior, client boundaries, and migration rollout](docs/soft-delete.md).
-
 ## 4. Deploy to Vercel (free)
 
 1. Push this project to a new GitHub repository.
@@ -104,13 +77,13 @@ log in or update records; their tracking IDs remain reserved. See
    (`DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `RESEND_API_KEY`,
    `EMAIL_FROM`). You don't need `SEED_*` unless you plan to re-run the seed
    script in Vercel's shell.
-4. Before deploying the app, apply versioned migrations against the production
-   database with `npm run db:migrate:deploy`. Existing databases need the one-time
-   baseline step in [the migration guide](docs/soft-delete.md). On a fresh database,
-   run `npm run seed` once to create the admin account.
-5. Deploy. Vercel runs `npm install` → `prisma generate` → `next build`
-   automatically. Run `db:migrate:deploy` in a serialized release step before each
-   application deployment; do not run migrations from individual web requests.
+4. Deploy. Vercel runs `npm install` → `prisma generate` → `next build`
+   automatically.
+5. After the first deploy, run the schema push and seed once, either:
+   - locally, pointed at your production database (safest — just run
+     `npx prisma db push` and `npm run seed` with your production
+     `DATABASE_URL` in `.env`), or
+   - via Vercel's CLI: `vercel env pull && npx prisma db push && npm run seed`.
 6. Visit `your-project.vercel.app/admin/login` and log in.
 
 Your site is now live on a free `your-project.vercel.app` domain. You can add
@@ -161,3 +134,28 @@ This is an independent, community-run project. It is not affiliated with,
 endorsed by, or connected to the German Federal Foreign Office or any German
 consulate. All timeline estimates are unofficial and for general guidance
 only.
+
+## Soft deletion
+
+Applicants and announcements are soft deleted using `prisma-extension-soft-delete`.
+Deleted applicants cannot log in or update their records. Normal queries exclude
+deleted records; history and unique tracking IDs remain stored. There is no new
+restore or purge workflow.
+
+For an existing database, apply the additive schema change before deploying:
+
+```bash
+npx prisma db execute --file prisma/soft-delete.sql --schema prisma/schema.prisma
+```
+
+Apply this SQL once; fresh databases can continue using the existing `db push`
+setup. Regenerate Prisma Client after schema changes. The shared client guards
+unique updates/upserts as well as the extension's default read/bulk-update filters.
+Explicit `deletedAt` filters are reserved for trusted maintenance, never request
+input. In interactive transactions use explicit `update`/`updateMany` and
+`findFirst` operations: the dependency rewrites deletes and unique reads using
+its captured client, which can escape the transaction context.
+
+Run the PostgreSQL regression suite with
+`TEST_DATABASE_URL=postgresql://... npm test`. Tests create and remove their own
+schema, leaving existing records untouched.

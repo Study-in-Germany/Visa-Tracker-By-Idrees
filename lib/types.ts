@@ -43,7 +43,6 @@ export type ApplicantRow = {
   approval?: string;
   isAnonymous?: boolean;
   createdAt?: string;
-  deletedAt?: string | null;
 };
 
 export type ApplicantsResponse = {

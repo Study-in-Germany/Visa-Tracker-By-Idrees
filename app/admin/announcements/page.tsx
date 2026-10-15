@@ -18,15 +18,12 @@ const SCOPE_OPTIONS = [{ value: "", label: "General (all embassies)" }, ...CONSU
 const emptyForm = { title: "", body: "", consulate: "", pinned: false };
 
 export default function AdminAnnouncementsPage() {
-  const [view, setView] = useState("active");
-  const deletedOnly = view === "deleted";
-  const { data, error, loading, reload } = useApi<{ announcements: any[] }>(deletedOnly ? "/api/announcements?deleted=true" : "/api/announcements");
+  const { data, error, loading, reload } = useApi<{ announcements: any[] }>("/api/announcements");
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  const announcements = (data?.announcements ?? []).filter((a) => !!a.deletedAt === deletedOnly);
+  const announcements = data?.announcements ?? [];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,27 +48,20 @@ export default function AdminAnnouncementsPage() {
     setMessage(null);
   }
 
-  async function changeVisibility(id: string, restore = false) {
-    if (!restore && !confirm("Delete this announcement? You can restore it from Deleted announcements.")) return;
-    setBusyId(id);
-    setMessage(null);
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this announcement?")) return;
     try {
-      await apiFetch(`/api/announcements/${id}${restore ? "/restore" : ""}`, { method: restore ? "POST" : "DELETE" });
-      setMessage({ tone: "success", text: restore ? "Announcement restored." : "Announcement deleted." });
-      if (editingId === id) { setEditingId(null); setForm(emptyForm); }
+      await apiFetch(`/api/announcements/${id}`, { method: "DELETE" });
+      setMessage({ tone: "success", text: "Announcement deleted." });
       reload();
     } catch (err: any) {
       setMessage({ tone: "error", text: err.message });
-    } finally {
-      setBusyId(null);
     }
   }
 
   return (
     <>
-      <PageHeader eyebrow="Admin" title="Announcements" actions={
-        <Select variant="pill" label="Announcement visibility" value={view} onChange={setView} options={[{ value: "active", label: "Current announcements" }, { value: "deleted", label: "Deleted announcements" }]} />
-      } />
+      <PageHeader eyebrow="Admin" title="Announcements" />
       {message && <div className="mb-4"><Notice tone={message.tone}>{message.text}</Notice></div>}
       <div className="grid gap-6 lg:grid-cols-2">
         <form onSubmit={handleSubmit} className="card h-fit space-y-3 p-4">
@@ -98,23 +88,19 @@ export default function AdminAnnouncementsPage() {
           ) : error ? (
             <div className="card"><ErrorState error={error} onRetry={reload} /></div>
           ) : announcements.length === 0 ? (
-            <div className="card"><EmptyState title={deletedOnly ? "No deleted announcements" : "No announcements yet"} hint={deletedOnly ? undefined : "Publish one with the form."} /></div>
+            <div className="card"><EmptyState title="No announcements yet" hint="Publish one with the form." /></div>
           ) : (
             announcements.map((a) => (
               <Panel key={a.id}>
                 <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                   <h3 className="font-semibold">{a.title}</h3>
-                  <span className="text-xs text-ink-600">{deletedOnly ? `Deleted ${fmtDate(a.deletedAt)}` : fmtDate(a.createdAt)}</span>
+                  <span className="text-xs text-ink-600">{fmtDate(a.createdAt)}</span>
                 </div>
                 <div className="mt-1.5 flex gap-1.5">{a.pinned && <Chip tone="accent">Pinned</Chip>}{a.consulate && <Chip>{a.consulate}</Chip>}</div>
                 <p className="mt-2 whitespace-pre-line text-sm text-ink-700">{a.body}</p>
                 <div className="mt-3 flex items-center gap-1">
-                  {deletedOnly ? (
-                    <button disabled={busyId !== null} onClick={() => changeVisibility(a.id, true)} className="min-h-[36px] rounded-md px-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 disabled:opacity-50">Restore</button>
-                  ) : <>
-                    <button onClick={() => startEdit(a)} className="min-h-[36px] rounded-md px-2.5 text-xs font-semibold hover:bg-paper-sunk">Edit</button>
-                    <button disabled={busyId !== null} onClick={() => changeVisibility(a.id)} className="min-h-[36px] rounded-md px-2.5 text-xs font-semibold text-red-800 hover:bg-red-50 disabled:opacity-50">Delete</button>
-                  </>}
+                  <button onClick={() => startEdit(a)} className="min-h-[36px] rounded-md px-2.5 text-xs font-semibold hover:bg-paper-sunk">Edit</button>
+                  <button onClick={() => handleDelete(a.id)} className="min-h-[36px] rounded-md px-2.5 text-xs font-semibold text-red-800 hover:bg-red-50">Delete</button>
                 </div>
               </Panel>
             ))
