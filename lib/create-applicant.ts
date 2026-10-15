@@ -6,7 +6,6 @@ type AllocationTransaction = Pick<Prisma.TransactionClient, "$executeRaw" | "$qu
   applicant: { create(args: { data: Prisma.ApplicantCreateInput }): Promise<Applicant> };
 };
 
-// Both the standard client and the soft-delete client provide these operations.
 type AllocationClient = {
   $transaction<T>(
     operation: (tx: AllocationTransaction) => Promise<T>,
@@ -14,7 +13,6 @@ type AllocationClient = {
   ): Promise<T>;
 };
 
-// Both submissions and CSV imports must allocate IDs through this function.
 export async function createApplicantWithTrackingId(
   data: Omit<Prisma.ApplicantCreateInput, "publicId"> & { consulate: string },
   db: AllocationClient = prisma,
@@ -25,8 +23,6 @@ export async function createApplicantWithTrackingId(
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${prefix}))`;
 
-    // Match IDs themselves, including retained rows. Counts fall behind after
-    // deletions or consulate changes; numeric MAX handles 99999 → 100000.
     const [row] = await tx.$queryRaw<{ sequence: bigint }[]>`
       SELECT GREATEST(
         COALESCE(MAX(SUBSTRING("publicId" FROM ${pattern})::bigint), 9999),
