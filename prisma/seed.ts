@@ -1,13 +1,11 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/db";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
 
 async function main() {
   const email = process.env.SEED_ADMIN_EMAIL || "admin@visatracker.local";
   const password = process.env.SEED_ADMIN_PASSWORD || "ChangeMe123!";
 
-  const existing = await prisma.adminUser.findUnique({ where: { email } });
+  const existing = await prisma.adminUser.findFirst({ where: { email, deletedAt: {} } });
   if (existing) {
     console.log(`Admin user ${email} already exists — skipping.`);
     return;

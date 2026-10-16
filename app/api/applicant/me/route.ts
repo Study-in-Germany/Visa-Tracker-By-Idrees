@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getApplicantSession } from "@/lib/auth";
 import { updateApplicantSchema } from "@/lib/validations";
+import { isRecordNotFound } from "@/lib/prisma-errors";
 
 export async function GET() {
   const session = await getApplicantSession();
@@ -58,7 +59,11 @@ export async function PATCH(req: NextRequest) {
       interviewDate: dateField(data.interviewDate),
       decisionDate: dateField(data.decisionDate),
     },
+  }).catch((error: unknown) => {
+    if (isRecordNotFound(error)) return null;
+    throw error;
   });
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const { accessCodeHash, ...safe } = updated;
   return NextResponse.json({ applicant: safe });

@@ -30,14 +30,6 @@ export async function verifySessionToken(token: string) {
   }
 }
 
-export async function getSession() {
-  const token = cookies().get(ADMIN_COOKIE)?.value;
-  if (!token) return null;
-  const payload = await verifySessionToken(token);
-  if (!payload || payload.kind !== "admin") return null;
-  return payload;
-}
-
 export function sessionCookieOptions() {
   return {
     name: ADMIN_COOKIE,

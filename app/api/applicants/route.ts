@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { submitApplicantSchema } from "@/lib/validations";
-import { getSession } from "@/lib/auth";
+import { getSession } from "@/lib/admin-session";
 import { generateAccessCode } from "@/lib/ids";
 import { createApplicantWithTrackingId } from "@/lib/create-applicant";
 import bcrypt from "bcryptjs";

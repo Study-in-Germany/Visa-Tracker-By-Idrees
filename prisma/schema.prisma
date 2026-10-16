@@ -72,6 +72,7 @@ model Applicant {
 
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
 
   history           StatusEvent[]
 
@@ -79,17 +80,21 @@ model Applicant {
   @@index([visaStatus])
   @@index([university])
   @@index([consulate])
+  @@index([deletedAt])
 }
 
 model StatusEvent {
   id          String     @id @default(cuid())
-  applicant   Applicant  @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  applicantId String
+  // The soft-delete extension returns null when including a deleted applicant.
+  applicant   Applicant? @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  applicantId String?
   visaStatus  VisaStatus
   note        String?
   occurredAt  DateTime   @default(now())
+  deletedAt   DateTime?
 
   @@index([applicantId])
+  @@index([deletedAt])
 }
 
 model Announcement {
@@ -100,6 +105,9 @@ model Announcement {
   pinned    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([deletedAt])
 }
 
 model AdminUser {
@@ -107,4 +115,7 @@ model AdminUser {
   email        String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
+  deletedAt    DateTime?
+
+  @@index([deletedAt])
 }
