@@ -1,7 +1,7 @@
 // Local development only. Creates one demo applicant so the applicant sign-in can be tried at any time.
 //   Tracking ID: DEMO-0001   Access code: DEMO-1234
 // Run with: npm run seed:demo
-import { prisma } from "../lib/db";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 if (process.env.NODE_ENV === "production") {
@@ -9,6 +9,7 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
+const prisma = new PrismaClient();
 const day = (s: string) => new Date(`${s}T00:00:00Z`);
 
 async function main() {
