@@ -24,6 +24,12 @@ import type { ApplicantRow } from "@/lib/types";
 import type { Period } from "@/lib/period";
 
 const STATUS_OPTIONS = [{ value: "", label: "All statuses" }, ...Object.entries(VISA_STATUS_LABELS).map(([value, label]) => ({ value, label }))];
+const MINI_STATS = [
+  { key: "total", label: "Total", dot: "bg-ink-600" },
+  { key: "activeApplicants", label: "Queue", dot: "bg-ochre-500" },
+  { key: "visaIssued", label: "Issued", dot: "bg-emerald-500" },
+  { key: "visaRejected", label: "Rejected", dot: "bg-red-500" },
+] as const;
 const CONSULATE_FILTER_OPTIONS = CONSULATE_OPTIONS.filter((o) => o.value);
 
 type ColumnFilters = {
@@ -55,86 +61,80 @@ const buildColumns = (f: ColumnFilters): Column<ApplicantRow>[] => [
   { key: "status", header: "Status", sortKey: "visaStatus", mobile: "badge", cell: (a) => <StatusBadge status={a.visaStatus} />, filter: { type: "select", label: "Status", value: f.status, options: STATUS_OPTIONS.filter((o) => o.value), onChange: f.setStatus } },
 ];
 
-// ── Rich mobile card ───────────────────────────────────────────────────────
+// ── Mobile card ────────────────────────────────────────────────────────────
+// Four journey stages, filled from the dates the applicant has recorded.
+const STAGES = [
+  { key: "waitingListDate", label: "Waiting list" },
+  { key: "documentSubmissionDate", label: "Documents" },
+  { key: "appointmentDate", label: "Appointment" },
+  { key: "decisionDate", label: "Decision" },
+] as const;
+
+const DONE_STATUSES = new Set(["VISA_ISSUED", "VISA_REJECTED", "WITHDRAWN"]);
+
+function plausible(v?: string | null) {
+  if (!v) return false;
+  const y = new Date(v).getUTCFullYear();
+  return y >= 2000 && y <= 2100;
+}
+
+function stageProgress(a: ApplicantRow) {
+  if (DONE_STATUSES.has(a.visaStatus)) return { done: 4, label: VISA_STATUS_LABELS[a.visaStatus] };
+  let done = 0;
+  STAGES.forEach((st, i) => { if (plausible((a as any)[st.key])) done = i + 1; });
+  done = Math.max(done, 1);
+  return { done, label: STAGES[done - 1].label };
+}
+
+function waitingFor(a: ApplicantRow) {
+  if (DONE_STATUSES.has(a.visaStatus) || !plausible(a.waitingListDate)) return null;
+  const days = Math.floor((Date.now() - new Date(a.waitingListDate as string).getTime()) / 86400000);
+  if (days < 0) return null;
+  if (days < 60) return `${days} ${days === 1 ? "day" : "days"}`;
+  const months = Math.floor(days / 30.4);
+  return months < 24 ? `${months} months` : `${(months / 12).toFixed(1)} years`;
+}
+
 function MobileCard({ a }: { a: ApplicantRow }) {
   const hex = VISA_STATUS_HEX[a.visaStatus] || "#888";
+  const { done, label: stage } = stageProgress(a);
+  const waited = waitingFor(a);
+  const meta = [a.consulate, a.intake].filter(Boolean).join(" · ");
   return (
     <Link
       href={`/tracker/${a.publicId}`}
-      className="block rounded-xl border border-line bg-paper-raised p-4 transition-colors active:bg-paper-sunk"
-      style={{ borderLeftColor: hex, borderLeftWidth: 3 }}
+      className="relative block overflow-hidden rounded-xl border border-line bg-paper-raised py-3 pl-4 pr-3 transition-colors active:bg-paper-sunk"
     >
-      {/* Top row: ID + status badge */}
-      <div className="flex items-start justify-between gap-3">
-        <span className="font-mono text-[13px] font-bold text-ink-900">{a.publicId}</span>
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1" style={{ background: hex }} />
+
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className={`truncate text-[15px] font-semibold leading-snug ${a.name ? "text-ink-900" : "text-mute"}`}>{a.name || "Anonymous"}</p>
+          <p className="truncate text-[13px] text-ink-700">{a.university || "University not listed"}</p>
+        </div>
         <StatusBadge status={a.visaStatus} />
       </div>
 
-      {/* Details grid */}
-      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5">
-        {a.university && (
-          <div className="col-span-2 flex items-center gap-2">
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-paper-sunk text-ink-600">
-              <Icon name="book" size={12} />
-            </span>
-            <div className="min-w-0">
-              <dt className="text-[10px] font-semibold uppercase tracking-wider text-mute">University</dt>
-              <dd className="truncate text-[13px] font-medium">{a.university}</dd>
-            </div>
-          </div>
-        )}
+      <p className="mt-1 truncate text-xs text-mute">
+        <span className="font-mono font-semibold text-ink-700">{a.publicId}</span>
+        {meta && <span> · {meta}</span>}
+      </p>
 
-        <div className="flex items-center gap-2">
-          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-paper-sunk text-ink-600">
-            <Icon name="search" size={12} />
-          </span>
-          <div className="min-w-0">
-            <dt className="text-[10px] font-semibold uppercase tracking-wider text-mute">Embassy</dt>
-            <dd className="text-[13px] font-medium">{a.consulate}</dd>
-          </div>
+      <div className="mt-2.5 flex items-center gap-3">
+        <div className="flex flex-1 gap-1" role="img" aria-label={`Stage ${done} of 4: ${stage}`}>
+          {STAGES.map((st, i) => (
+            <span key={st.key} className="h-1.5 flex-1 rounded-full" style={{ background: i < done ? hex : "#e3e0d8" }} />
+          ))}
         </div>
+        <span className="shrink-0 text-[11px] font-medium text-ink-700">Step {done} of 4</span>
+      </div>
 
-        {a.waitingListDate && (
-          <div className="flex items-center gap-2">
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-paper-sunk text-ink-600">
-              <Icon name="clock" size={12} />
-            </span>
-            <div className="min-w-0">
-              <dt className="text-[10px] font-semibold uppercase tracking-wider text-mute">Waiting list</dt>
-              <dd className="text-[13px] font-medium">{fmtDate(a.waitingListDate)}</dd>
-            </div>
-          </div>
-        )}
-
-        {a.appointmentDate && (
-          <div className="flex items-center gap-2">
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-paper-sunk text-ink-600">
-              <Icon name="calendar" size={12} />
-            </span>
-            <div className="min-w-0">
-              <dt className="text-[10px] font-semibold uppercase tracking-wider text-mute">Appointment</dt>
-              <dd className="text-[13px] font-medium">{fmtDate(a.appointmentDate)}</dd>
-            </div>
-          </div>
-        )}
-
-        {a.documentSubmissionDate && (
-          <div className="flex items-center gap-2">
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-paper-sunk text-ink-600">
-              <Icon name="send" size={12} />
-            </span>
-            <div className="min-w-0">
-              <dt className="text-[10px] font-semibold uppercase tracking-wider text-mute">Documents</dt>
-              <dd className="text-[13px] font-medium">{fmtDate(a.documentSubmissionDate)}</dd>
-            </div>
-          </div>
-        )}
-      </dl>
-
-      {/* Chevron hint */}
-      <div className="mt-3 flex items-center justify-end text-xs text-mute">
-        <span>View timeline</span>
-        <Icon name="chevronRight" size={13} className="ml-0.5" />
+      <div className="mt-1.5 flex items-center justify-between text-[11px] text-mute">
+        <span>
+          {waited ? `Waiting ${waited}` : a.decisionDate && plausible(a.decisionDate) ? `Decision ${fmtDate(a.decisionDate)}` : "Joined " + fmtDate(a.waitingListDate)}
+          {a.appointmentDate && plausible(a.appointmentDate) && !DONE_STATUSES.has(a.visaStatus) ? ` · Appt ${fmtDate(a.appointmentDate)}` : ""}
+        </span>
+        <Icon name="chevronRight" size={14} />
       </div>
     </Link>
   );
@@ -153,7 +153,7 @@ function MobileList({
 
   return (
     <div className={`transition-opacity ${loading ? "opacity-60" : ""}`}>
-      <ul className="space-y-2.5">
+      <ul className="space-y-2">
         {rows.map(a => <li key={a.id}><MobileCard a={a} /></li>)}
       </ul>
       {(pageCount > 1 || total !== undefined) && (
@@ -209,16 +209,42 @@ function TrackerInner() {
         title="Tracker"
         description="Community-submitted, admin-approved entries."
         actions={
-          <>
+          <div className="hidden flex-wrap items-center gap-2 sm:flex">
             <DateRangePicker value={period} onChange={setPeriod} />
-            <Select variant="pill" label="Embassy" prefix="Embassy" value={consulate} onChange={setConsulate} options={CONSULATE_OPTIONS} className="w-full sm:w-auto" />
-            <Select variant="pill" label="Status" prefix="Status" value={visaStatus} onChange={setVisaStatus} options={STATUS_OPTIONS} className="w-full sm:w-auto" />
-          </>
+            <Select variant="pill" label="Embassy" prefix="Embassy" value={consulate} onChange={setConsulate} options={CONSULATE_OPTIONS} />
+            <Select variant="pill" label="Status" prefix="Status" value={visaStatus} onChange={setVisaStatus} options={STATUS_OPTIONS} />
+          </div>
         }
       />
 
+      {/* Phone filters: one swipeable row of compact pills */}
+      <div className="-mx-3 mb-3 flex gap-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
+        <DateRangePicker value={period} onChange={setPeriod} label={period.from || period.to ? "Joined" : ""} className="shrink-0" />
+        <Select variant="pill" label="Embassy" prefix={consulate ? "Embassy" : undefined} value={consulate} onChange={setConsulate} options={CONSULATE_OPTIONS} className="shrink-0" />
+        <Select variant="pill" label="Status" prefix={visaStatus ? "Status" : undefined} value={visaStatus} onChange={setVisaStatus} options={STATUS_OPTIONS} className="shrink-0" />
+        {hasFilters && (
+          <button type="button" onClick={clearAll} className="shrink-0 rounded-lg px-2.5 text-xs font-semibold text-clay-600">Clear</button>
+        )}
+      </div>
+
       {/* KPI stats */}
-      <section aria-label="Summary" className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section aria-label="Summary" className="card mb-3 grid grid-cols-4 divide-x divide-line sm:hidden">
+        {MINI_STATS.map((m) => {
+          const v = s?.[m.key];
+          return (
+            <div key={m.key} className="min-w-0 px-1 py-2.5 text-center">
+              <div className="text-lg font-bold leading-none tracking-tight">
+                {stats.loading && !s ? <span className="mx-auto block h-[18px] w-7 animate-pulse rounded bg-paper-sunk" /> : v == null ? "—" : v.toLocaleString("en-US")}
+              </div>
+              <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] font-medium uppercase tracking-wide text-mute">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${m.dot}`} aria-hidden="true" />
+                <span className="truncate">{m.label}</span>
+              </div>
+            </div>
+          );
+        })}
+      </section>
+      <section aria-label="Summary" className="mb-3 hidden grid-cols-2 gap-3 sm:grid lg:grid-cols-4">
         <StatCard icon="users" tone="sage" label="Applicants" value={s?.total} loading={stats.loading && !s} />
         <StatCard icon="hourglass" tone="warn" label="In the queue" value={s?.activeApplicants} loading={stats.loading && !s} />
         <StatCard icon="checkCircle" tone="good" label="Visa issued" value={s?.visaIssued} loading={stats.loading && !s} />
@@ -238,7 +264,7 @@ function TrackerInner() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="hidden flex-wrap items-center gap-1.5 sm:flex">
           {consulate && <FilterChip label={`Embassy: ${consulate}`} active onRemove={() => setConsulate("")} />}
           {university && <FilterChip label={`Uni: ${university}`} active onRemove={() => setUniversity("")} />}
           {visaStatus && <FilterChip label={VISA_STATUS_LABELS[visaStatus]} active onRemove={() => setVisaStatus("")} />}

@@ -32,6 +32,7 @@ export type ApplicantRow = {
   name: string | null;
   university: string | null;
   program?: string | null;
+  intake?: string | null;
   consulate: string;
   waitingListDate: string | null;
   submissionInviteDate?: string | null;

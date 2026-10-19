@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { CONSULATES, VISA_STATUS_ORDER } from "@/lib/constants";
+import { parseCalendarDay } from "@/lib/period";
 
 const optionalStr = z.string().max(500).optional().or(z.literal(""));
 const optionalDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid date")
+  .refine((v) => parseCalendarDay(v) !== null, "Enter a real date between 2000 and 2100")
   .optional()
   .or(z.literal(""));
 

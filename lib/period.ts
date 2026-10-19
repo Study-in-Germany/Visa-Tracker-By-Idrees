@@ -7,6 +7,16 @@ export type Period = { from: string; to: string }; // "" means open-ended
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Strict calendar check: a real YYYY-MM-DD between 2000 and 2100 (rejects 2026-13-01, 2026-02-31, 0002-01-31). */
+export function parseCalendarDay(value: string | null | undefined): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if (y < 2000 || y > 2100 || mo < 1 || mo > 12 || d < 1) return null;
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  return dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d ? dt : null;
+}
+
 export function parseDay(value: string | null | undefined): Date | null {
   if (!value || !ISO_DAY.test(value)) return null;
   const d = new Date(`${value}T00:00:00.000Z`);

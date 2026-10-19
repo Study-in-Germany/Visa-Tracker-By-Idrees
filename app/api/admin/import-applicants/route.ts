@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getSession } from "@/lib/auth";
 import { parseCSV } from "@/lib/csv";
+import { parseCalendarDay } from "@/lib/period";
 import { generateAccessCode } from "@/lib/ids";
 import { createApplicantWithTrackingId } from "@/lib/create-applicant";
 import { CONSULATES, VISA_STATUS_LABELS, VISA_STATUS_ORDER, GENDER_LABELS } from "@/lib/constants";
@@ -19,8 +20,11 @@ const DATE_COLUMNS: Record<string, string> = {
 
 function parseDate(value: string | undefined): Date | null {
   if (!value) return null;
-  const d = new Date(value);
-  return isNaN(d.getTime()) ? null : d;
+  const trimmed = value.trim();
+  const iso = parseCalendarDay(trimmed);
+  if (iso) return iso;
+  const d = new Date(trimmed);
+  return isNaN(d.getTime()) || d.getUTCFullYear() < 2000 || d.getUTCFullYear() > 2100 ? null : d;
 }
 
 function matchConsulate(value: string | undefined): string {

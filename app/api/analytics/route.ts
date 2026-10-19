@@ -5,6 +5,7 @@ import { ACTIVE_STATUSES } from "@/lib/constants";
 
 function daysBetween(a: Date | null, b: Date | null) {
   if (!a || !b) return null;
+  if (a.getUTCFullYear() < 2000 || b.getUTCFullYear() < 2000) return null; // ignore typo'd dates
   return Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
 }
 

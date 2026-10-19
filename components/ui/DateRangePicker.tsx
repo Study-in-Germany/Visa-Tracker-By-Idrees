@@ -35,10 +35,10 @@ export default function DateRangePicker({ value, onChange, label = "Joined", cla
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`flex min-h-[36px] w-full items-center gap-2 rounded-lg border bg-paper-raised px-3 text-[13px] transition-colors hover:border-ink-300 sm:w-auto ${open ? "border-ink-600 ring-1 ring-ink-600" : "border-line-strong"}`}
+        className={`flex min-h-[32px] w-full items-center gap-1.5 rounded-lg border bg-paper-raised px-2.5 text-[13px] transition-colors hover:border-ink-300 sm:w-auto ${open ? "border-ink-600 ring-1 ring-ink-600" : "border-line-strong"}`}
       >
         <Icon name="calendar" size={15} className="text-mute" />
-        <span className="text-mute">{label}</span>
+        {label && <span className="text-mute">{label}</span>}
         <span className="font-medium">{describePeriod(value)}</span>
         <Icon name="chevronDown" size={14} className={`ml-auto text-mute transition-transform ${open ? "rotate-180" : ""}`} />
       </button>

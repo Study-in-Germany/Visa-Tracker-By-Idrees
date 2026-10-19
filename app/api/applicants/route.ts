@@ -6,7 +6,7 @@ import { generateAccessCode } from "@/lib/ids";
 import { createApplicantWithTrackingId } from "@/lib/create-applicant";
 import bcrypt from "bcryptjs";
 import { waitingListWhere } from "@/lib/period";
-import { VISA_STATUS_LABELS } from "@/lib/constants";
+import { VISA_STATUS_LABELS, CONSULATES } from "@/lib/constants";
 
 const DATE_FIELDS = ["waitingListDate", "submissionInviteDate", "documentSubmissionDate", "correctionRequestDate", "correctionSubmittedDate", "appointmentDate", "interviewDate", "decisionDate"] as const;
 
@@ -41,6 +41,11 @@ export async function GET(req: NextRequest) {
   const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "", 10) || 25));
   const sortParam = searchParams.get("sort") || "";
   const dir = searchParams.get("dir") === "desc" ? "desc" : "asc";
+
+  const bad = (field: string) => NextResponse.json({ error: `Invalid ${field} filter` }, { status: 400 });
+  if (visaStatus && !(visaStatus in VISA_STATUS_LABELS)) return bad("visaStatus");
+  if (consulate && !CONSULATES.includes(consulate)) return bad("consulate");
+  if (approvalParam && !["PENDING_REVIEW", "APPROVED", "REJECTED"].includes(approvalParam)) return bad("approval");
 
   const where: any = {};
 
@@ -148,7 +153,9 @@ export async function POST(req: NextRequest) {
   const accessCode = generateAccessCode();
   const accessCodeHash = await bcrypt.hash(accessCode, 10);
 
-  const applicant = await createApplicantWithTrackingId({
+  let applicant;
+  try {
+    applicant = await createApplicantWithTrackingId({
     accessCodeHash,
     name: data.name,
     email: data.email || null,
@@ -175,7 +182,11 @@ export async function POST(req: NextRequest) {
     history: {
       create: [{ visaStatus: "WAITING_LIST", note: "Entry submitted by applicant" }],
     },
-  });
+    });
+  } catch (err) {
+    console.error("Submit failed:", err);
+    return NextResponse.json({ error: "We could not save your entry right now. Please try again in a moment." }, { status: 500 });
+  }
 
   return NextResponse.json(
     {
