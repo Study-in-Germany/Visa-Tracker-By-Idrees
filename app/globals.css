@@ -3,26 +3,120 @@
 @tailwind utilities;
 
 @layer base {
+  /* Colour tokens as RGB triplets (consumed by tailwind.config.ts). Light is the default theme. */
+  :root {
+    --paper: 239 238 233; --paper-raised: 251 250 247; --paper-sunk: 231 229 222; --card: 255 255 255;
+    --line: 227 224 216; --line-strong: 208 204 192; --mute: 123 120 111;
+    --ink-50: 238 242 238; --ink-100: 221 230 223; --ink-300: 138 161 144; --ink-600: 74 99 80;
+    --ink-700: 58 81 64; --ink-800: 46 66 53; --ink-900: 35 47 39;
+    --clay-50: 251 238 232; --clay-100: 244 216 203; --clay-400: 205 106 69; --clay-500: 181 83 47; --clay-600: 154 68 37;
+    --ochre-50: 251 243 223; --ochre-500: 185 138 31; --ochre-700: 138 100 20;
+    --scroll: 208 204 192; --scroll-hover: 170 165 149;
+    color-scheme: light;
+  }
+  .dark {
+    --paper: 17 20 18; --paper-raised: 25 29 26; --paper-sunk: 34 39 35; --card: 25 29 26;
+    --line: 43 49 45; --line-strong: 59 67 62; --mute: 155 160 150;
+    --ink-50: 29 38 32; --ink-100: 39 51 43; --ink-300: 108 132 114; --ink-600: 155 181 161;
+    --ink-700: 188 207 192; --ink-800: 220 232 223; --ink-900: 239 244 240;
+    --clay-50: 44 28 21; --clay-100: 68 42 30; --clay-400: 224 145 111; --clay-500: 212 120 79; --clay-600: 234 162 133;
+    --ochre-50: 42 35 18; --ochre-500: 214 166 58; --ochre-700: 232 196 108;
+    --scroll: 59 67 62; --scroll-hover: 90 100 93;
+    color-scheme: dark;
+  }
+
   /* Thin, quiet scrollbars */
-  * { scrollbar-width: thin; scrollbar-color: #d0ccc0 transparent; }
+  * { scrollbar-width: thin; scrollbar-color: rgb(var(--scroll)) transparent; }
   *::-webkit-scrollbar { width: 8px; height: 8px; }
   *::-webkit-scrollbar-track { background: transparent; }
-  *::-webkit-scrollbar-thumb { background-color: #d0ccc0; border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
-  *::-webkit-scrollbar-thumb:hover { background-color: #aaa595; }
+  *::-webkit-scrollbar-thumb { background-color: rgb(var(--scroll)); border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
+  *::-webkit-scrollbar-thumb:hover { background-color: rgb(var(--scroll-hover)); }
   *::-webkit-scrollbar-corner { background: transparent; }
   html { -webkit-text-size-adjust: 100%; font-size: 14px; }
   body { @apply bg-paper text-[13px] text-ink-900 antialiased; overscroll-behavior-y: none; }
   :focus-visible { @apply outline-none ring-2 ring-clay-500 ring-offset-2 ring-offset-paper; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
 }
 
+/* Theme switch: the browser snapshots old and new page; we reveal the new one with a growing circle (see useTheme) */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+
 @layer components {
+  /* Applied for ~400ms while switching theme so colours fade instead of snapping */
+  .theme-transition, .theme-transition *, .theme-transition *::before, .theme-transition *::after {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, fill 0.3s ease, stroke 0.3s ease, box-shadow 0.3s ease !important;
+  }
+
+  /* Rich-text editor (Tiptap): fixed height, scrolls inside, same type scale as the rendered description */
+  .rt-editor .ProseMirror { height: 260px; overflow-y: auto; padding: 0.75rem; font-size: 14px; line-height: 1.6; outline: none; }
+  .rt-editor .ProseMirror > * + * { margin-top: 0.6rem; }
+  .rt-editor .ProseMirror h1 { font-size: 18px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+  .rt-editor .ProseMirror h2 { font-size: 15px; font-weight: 600; line-height: 1.35; }
+  .rt-editor .ProseMirror ul { list-style: disc; padding-left: 1.25rem; }
+  .rt-editor .ProseMirror ol { list-style: decimal; padding-left: 1.25rem; }
+  .rt-editor .ProseMirror li > p { margin: 0; }
+  .rt-editor .ProseMirror li + li { margin-top: 0.2rem; }
+  .rt-editor .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: rgb(var(--ink-300)); }
+
+  /* Touch screens: finger-sized controls, and 16px inputs so iOS doesn't zoom in on focus */
+  @media (pointer: coarse) {
+    .btn { min-height: 44px; }
+    .input { min-height: 44px; font-size: 16px; }
+    .rt-editor .ProseMirror { font-size: 16px; }
+  }
   .badge { @apply inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap; }
-  .card { @apply rounded-xl border border-line bg-paper-raised; }
+  .card { @apply rounded-xl border border-line bg-card shadow-[0_1px_2px_rgba(35,47,39,0.05)]; }
   .btn { @apply inline-flex min-h-[36px] items-center justify-center gap-2 rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
   .btn-primary { @apply btn bg-ink-800 text-paper-raised hover:bg-ink-900; }
-  .btn-gold { @apply btn bg-clay-500 text-white hover:bg-clay-600; }
+  .btn-gold { @apply btn bg-clay-500 text-white hover:brightness-95; }
   .btn-secondary { @apply btn border border-line-strong bg-paper-raised text-ink-800 hover:bg-paper-sunk; }
+  .btn-danger { @apply btn border border-red-300 bg-red-50 text-red-800 hover:brightness-95; }
   .input { @apply min-h-[36px] w-full rounded-lg border border-line-strong bg-paper-raised px-3 py-1.5 text-[13px] transition-colors placeholder:text-ink-300 hover:border-ink-300 focus:border-ink-600 focus:ring-1 focus:ring-ink-600; }
   .label { @apply mb-1 block text-xs font-medium text-ink-700; }
   .eyebrow { @apply text-xs font-semibold uppercase tracking-wider text-ink-600; }
 }
+
+/* Dark theme: remap the hard-coded Tailwind palette colours (status badges, notices) to readable equivalents. */
+.dark .bg-white, .dark .hover:bg-white:hover { background-color: rgb(var(--paper-raised)); }
+.dark .bg-slate-50 { background-color: rgb(100 116 139 / 0.12); }
+.dark .bg-slate-100 { background-color: rgb(100 116 139 / 0.2); }
+.dark .border-slate-300, .dark .border-slate-400 { border-color: rgb(100 116 139 / 0.4); }
+.dark .text-slate-600, .dark .text-slate-700, .dark .text-slate-800, .dark .text-slate-900 { color: rgb(203 213 225); }
+.dark .bg-gray-50 { background-color: rgb(156 163 175 / 0.12); }
+.dark .bg-gray-100 { background-color: rgb(156 163 175 / 0.2); }
+.dark .border-gray-300, .dark .border-gray-400 { border-color: rgb(156 163 175 / 0.4); }
+.dark .text-gray-600, .dark .text-gray-700, .dark .text-gray-800, .dark .text-gray-900 { color: rgb(209 213 219); }
+.dark .bg-sky-50 { background-color: rgb(56 189 248 / 0.12); }
+.dark .bg-sky-100 { background-color: rgb(56 189 248 / 0.2); }
+.dark .border-sky-300, .dark .border-sky-400 { border-color: rgb(56 189 248 / 0.4); }
+.dark .text-sky-600, .dark .text-sky-700, .dark .text-sky-800, .dark .text-sky-900 { color: rgb(125 211 252); }
+.dark .bg-blue-50 { background-color: rgb(96 165 250 / 0.12); }
+.dark .bg-blue-100 { background-color: rgb(96 165 250 / 0.2); }
+.dark .border-blue-300, .dark .border-blue-400 { border-color: rgb(96 165 250 / 0.4); }
+.dark .text-blue-600, .dark .text-blue-700, .dark .text-blue-800, .dark .text-blue-900 { color: rgb(147 197 253); }
+.dark .bg-amber-50 { background-color: rgb(251 191 36 / 0.12); }
+.dark .bg-amber-100 { background-color: rgb(251 191 36 / 0.2); }
+.dark .border-amber-300, .dark .border-amber-400 { border-color: rgb(251 191 36 / 0.4); }
+.dark .text-amber-600, .dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900 { color: rgb(252 211 77); }
+.dark .bg-teal-50 { background-color: rgb(45 212 191 / 0.12); }
+.dark .bg-teal-100 { background-color: rgb(45 212 191 / 0.2); }
+.dark .border-teal-300, .dark .border-teal-400 { border-color: rgb(45 212 191 / 0.4); }
+.dark .text-teal-600, .dark .text-teal-700, .dark .text-teal-800, .dark .text-teal-900 { color: rgb(94 234 212); }
+.dark .bg-violet-50 { background-color: rgb(167 139 250 / 0.12); }
+.dark .bg-violet-100 { background-color: rgb(167 139 250 / 0.2); }
+.dark .border-violet-300, .dark .border-violet-400 { border-color: rgb(167 139 250 / 0.4); }
+.dark .text-violet-600, .dark .text-violet-700, .dark .text-violet-800, .dark .text-violet-900 { color: rgb(196 181 253); }
+.dark .bg-green-50 { background-color: rgb(74 222 128 / 0.12); }
+.dark .bg-green-100 { background-color: rgb(74 222 128 / 0.2); }
+.dark .border-green-300, .dark .border-green-400 { border-color: rgb(74 222 128 / 0.4); }
+.dark .text-green-600, .dark .text-green-700, .dark .text-green-800, .dark .text-green-900 { color: rgb(134 239 172); }
+.dark .bg-red-50 { background-color: rgb(248 113 113 / 0.12); }
+.dark .bg-red-100 { background-color: rgb(248 113 113 / 0.2); }
+.dark .border-red-300, .dark .border-red-400 { border-color: rgb(248 113 113 / 0.4); }
+.dark .text-red-600, .dark .text-red-700, .dark .text-red-800, .dark .text-red-900 { color: rgb(252 165 165); }
+.dark .bg-emerald-50 { background-color: rgb(52 211 153 / 0.12); }
+.dark .bg-emerald-100 { background-color: rgb(52 211 153 / 0.2); }
+.dark .border-emerald-300, .dark .border-emerald-400 { border-color: rgb(52 211 153 / 0.4); }
+.dark .text-emerald-600, .dark .text-emerald-700, .dark .text-emerald-800, .dark .text-emerald-900 { color: rgb(110 231 183); }

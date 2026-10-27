@@ -33,31 +33,47 @@ export const VISA_STATUS_ORDER = [
   "OTHER",
 ];
 
+// One palette, used by chips, badges, row accents, cards and charts.
+// slate · sky · blue · amber · teal · violet · green · red · grey
 export const VISA_STATUS_COLORS: Record<string, string> = {
-  WAITING_LIST: "bg-paper-sunk text-ink-700 border-line-strong",
-  WAITING_FOR_SUBMISSION: "bg-ochre-50 text-ochre-700 border-ochre-500/30",
-  SUBMISSION_RECEIVED: "bg-ink-50 text-ink-700 border-ink-300/50",
-  UNDER_CORRECTION: "bg-clay-50 text-clay-600 border-clay-400/40",
-  APPOINTMENT_SCHEDULED: "bg-ink-100 text-ink-800 border-ink-300",
-  PROCESSING: "bg-ochre-50 text-ochre-700 border-ochre-500/40",
-  VISA_ISSUED: "bg-emerald-50 text-emerald-800 border-emerald-300",
+  WAITING_LIST: "bg-slate-100 text-slate-700 border-slate-300",
+  WAITING_FOR_SUBMISSION: "bg-sky-50 text-sky-800 border-sky-300",
+  SUBMISSION_RECEIVED: "bg-blue-50 text-blue-800 border-blue-300",
+  UNDER_CORRECTION: "bg-amber-50 text-amber-800 border-amber-300",
+  APPOINTMENT_SCHEDULED: "bg-teal-50 text-teal-800 border-teal-300",
+  PROCESSING: "bg-violet-50 text-violet-800 border-violet-300",
+  VISA_ISSUED: "bg-green-50 text-green-800 border-green-300",
   VISA_REJECTED: "bg-red-50 text-red-800 border-red-300",
-  WITHDRAWN: "bg-paper-sunk text-ink-600 border-line",
-  OTHER: "bg-paper-sunk text-ink-600 border-line",
+  WITHDRAWN: "bg-gray-100 text-gray-600 border-gray-300",
+  OTHER: "bg-gray-100 text-gray-600 border-gray-300",
 };
 
-// Hex values for charts, kept in step with VISA_STATUS_COLORS.
+// Hex values for charts and row accents, kept in step with VISA_STATUS_COLORS.
 export const VISA_STATUS_HEX: Record<string, string> = {
-  WAITING_LIST: "#a89f8a",
-  WAITING_FOR_SUBMISSION: "#d2a63a",
-  SUBMISSION_RECEIVED: "#7f9a86",
-  UNDER_CORRECTION: "#cd6a45",
-  APPOINTMENT_SCHEDULED: "#4a6350",
-  PROCESSING: "#b98a1f",
-  VISA_ISSUED: "#2f7d57",
-  VISA_REJECTED: "#b3372f",
-  WITHDRAWN: "#c9c1ae",
-  OTHER: "#d9d2c0",
+  WAITING_LIST: "#64748b",
+  WAITING_FOR_SUBMISSION: "#0ea5e9",
+  SUBMISSION_RECEIVED: "#3b82f6",
+  UNDER_CORRECTION: "#d97706",
+  APPOINTMENT_SCHEDULED: "#0d9488",
+  PROCESSING: "#7c3aed",
+  VISA_ISSUED: "#16a34a",
+  VISA_REJECTED: "#dc2626",
+  WITHDRAWN: "#94a3b8",
+  OTHER: "#cbd5e1",
+};
+
+/** Compact labels for chips and narrow layouts. */
+export const VISA_STATUS_SHORT: Record<string, string> = {
+  WAITING_LIST: "Waiting",
+  WAITING_FOR_SUBMISSION: "Invited",
+  SUBMISSION_RECEIVED: "Submitted",
+  UNDER_CORRECTION: "Correction",
+  APPOINTMENT_SCHEDULED: "Appointment",
+  PROCESSING: "Processing",
+  VISA_ISSUED: "Issued",
+  VISA_REJECTED: "Rejected",
+  WITHDRAWN: "Withdrawn",
+  OTHER: "Other",
 };
 
 export const ACTIVE_STATUSES = [

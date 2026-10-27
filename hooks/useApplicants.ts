@@ -8,6 +8,7 @@ import type { ApplicantsResponse } from "@/lib/types";
 export type ApplicantFilters = {
   q?: string;
   consulate?: string;
+  intake?: string;
   visaStatus?: string;
   approval?: string;
   from?: string;

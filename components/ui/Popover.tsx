@@ -51,7 +51,7 @@ export default function Popover({
     if (isSheet) return setPos(null);
     const r = a.getBoundingClientRect();
     const w = Math.max(minWidth, width === "anchor" ? r.width : width);
-    const h = p?.offsetHeight ?? 0;
+    const h = p?.scrollHeight ?? 0;
     const below = window.innerHeight - r.bottom - 12;
     const above = r.top - 12;
     const flip = h > below && above > below;
@@ -61,7 +61,7 @@ export default function Popover({
       left,
       width: w,
       top: flip ? Math.max(8, r.top - 6 - Math.min(h, above)) : r.bottom + 6,
-      maxHeight: Math.max(160, flip ? above : below),
+      maxHeight: Math.min(420, Math.max(160, flip ? above : below)),
     });
   };
 

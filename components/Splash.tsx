@@ -14,8 +14,8 @@ export default function Splash() {
       sessionStorage.setItem("vt.splash", "1");
     } catch {}
     if (seen) return setPhase("gone");
-    const t1 = setTimeout(() => setPhase("fade"), 650);
-    const t2 = setTimeout(() => setPhase("gone"), 1000);
+    const t1 = setTimeout(() => setPhase("fade"), 250);
+    const t2 = setTimeout(() => setPhase("gone"), 500);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);

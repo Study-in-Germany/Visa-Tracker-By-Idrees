@@ -1,8 +1,11 @@
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /** Per-field validation messages from the server, when it sent any. */
+  fields?: Record<string, string[]>;
+  constructor(message: string, status: number, fields?: Record<string, string[]>) {
     super(message);
     this.status = status;
+    this.fields = fields;
   }
 }
 
@@ -24,7 +27,7 @@ export async function apiFetch<T = any>(url: string, init?: RequestInit): Promis
       : "";
     const message =
       typeof raw === "string" ? raw : fieldText || (res.status >= 500 ? "The server hit a problem. Please try again." : "Request failed.");
-    throw new ApiError(message, res.status);
+    throw new ApiError(message, res.status, fields);
   }
   return body as T;
 }

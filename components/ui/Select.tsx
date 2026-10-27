@@ -23,6 +23,7 @@ export default function Select({
   variant = "field",
   prefix,
   clearable,
+  buttonClassName = "",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -38,6 +39,8 @@ export default function Select({
   /** Muted text shown before the value, e.g. "Status". */
   prefix?: string;
   clearable?: boolean;
+  /** Extra classes for the trigger button itself (e.g. to match a neighbouring button's height and shape). */
+  buttonClassName?: string;
 }) {
   // A stored value that is not in the list (older free-text data) stays visible and selectable.
   const options = useMemo(() => (value && !given.some((o) => o.value === value) ? [{ value, label: value }, ...given] : given), [given, value]);
@@ -113,7 +116,7 @@ export default function Select({
         onKeyDown={onKeyDown}
         className={`flex w-full items-center justify-between gap-2 border bg-paper-raised text-left transition-colors hover:border-ink-300 disabled:cursor-not-allowed disabled:opacity-50 ${
           pill ? "min-h-[32px] rounded-lg px-2.5 text-[13px]" : "min-h-[36px] rounded-lg px-3 text-[13px]"
-        } ${open ? "border-ink-600 ring-1 ring-ink-600" : "border-line-strong"} ${showClear ? "pr-8" : ""}`}
+        } ${open ? "border-ink-600 ring-1 ring-ink-600" : "border-line-strong"} ${showClear ? "pr-8" : ""} ${buttonClassName}`}
       >
         <span className="flex min-w-0 items-center gap-1.5">
           {prefix && <span className="shrink-0 text-mute">{prefix}</span>}
@@ -127,8 +130,8 @@ export default function Select({
         </button>
       )}
 
-      <Popover open={open} onClose={() => setOpen(false)} anchorRef={btnRef as React.RefObject<HTMLElement>} title={label} minWidth={pill ? 180 : 0}>
-        <ul ref={listRef} id={`${uid}-list`} role="listbox" aria-label={label} className="max-h-72 overflow-y-auto p-1">
+      <Popover open={open} onClose={() => setOpen(false)} anchorRef={btnRef as React.RefObject<HTMLElement>} title={label} minWidth={pill ? 240 : 0}>
+        <ul ref={listRef} id={`${uid}-list`} role="listbox" aria-label={label} className="p-1">
           {options.map((o, i) => {
             const isSel = o.value === value;
             return (

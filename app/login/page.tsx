@@ -26,7 +26,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await apiFetch("/api/applicant/login", jsonInit("POST", { publicId: publicId.trim(), accessCode: accessCode.trim() }));
-      router.push("/dashboard");
+      // Return to the page that asked for sign-in, but only to a path on this site.
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.push(next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/dashboard");
       router.refresh();
     } catch (err: any) {
       setError(err.status === 401 ? "That Tracking ID and access code do not match. Check both and try again." : err.message);

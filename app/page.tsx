@@ -117,7 +117,7 @@ export default async function HomePage() {
   const issueRate = decided > 0 ? Math.round((d.issued / decided) * 100) : null;
 
   // Build status funnel rows (only statuses with data, in order)
-  const funnelStatuses = VISA_STATUS_ORDER.filter(k => (d.statusCounts[k] ?? 0) > 0);
+  const funnelStatuses = VISA_STATUS_ORDER.filter(k => k !== "OTHER" || (d.statusCounts[k] ?? 0) > 0);
   const maxCount = Math.max(...funnelStatuses.map(k => d.statusCounts[k] ?? 0), 1);
 
   const processingStages = [
@@ -190,7 +190,7 @@ export default async function HomePage() {
         </div>
 
         {/* Islamabad */}
-        <Link href="/tracker?consulate=Islamabad" className="card p-4 transition-colors hover:bg-white">
+        <Link href="/tracker?consulate=Islamabad" className="card p-4 transition-colors hover:bg-card">
           <div className="flex items-start justify-between">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-clay-50 text-clay-500">
               <Icon name="search" size={16} />
@@ -203,7 +203,7 @@ export default async function HomePage() {
         </Link>
 
         {/* Karachi */}
-        <Link href="/tracker?consulate=Karachi" className="card p-4 transition-colors hover:bg-white">
+        <Link href="/tracker?consulate=Karachi" className="card p-4 transition-colors hover:bg-card">
           <div className="flex items-start justify-between">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-paper-sunk text-ink-700">
               <Icon name="search" size={16} />
@@ -219,58 +219,40 @@ export default async function HomePage() {
       {/* ── Status pipeline + Processing times ───────────────── */}
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
 
-        {/* Status pipeline — icon chips grid */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-4">
+        {/* Status pipeline: every stage as a full-width row with its count, stretching to the card's height */}
+        <div className="card flex flex-col p-5">
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold">Status pipeline</h2>
-            <Link href="/tracker" className="text-xs font-medium text-clay-600 hover:underline flex items-center gap-1">
+            <Link href="/tracker" className="flex items-center gap-1 text-xs font-medium text-clay-600 hover:underline">
               View all <Icon name="chevronRight" size={13} />
             </Link>
           </div>
 
-          {funnelStatuses.length === 0 ? (
-            <p className="text-sm text-mute py-4 text-center">No approved entries yet.</p>
+          {d.total === 0 ? (
+            <p className="py-4 text-center text-sm text-mute">No approved entries yet.</p>
           ) : (
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {funnelStatuses.map(k => {
-                const count = d.statusCounts[k] ?? 0;
-                const pct = d.total > 0 ? Math.round((count / d.total) * 100) : 0;
-                const hex = VISA_STATUS_HEX[k] || "#888";
-                const STATUS_ICONS: Record<string, string> = {
-                  WAITING_LIST: "M12 22a10 10 0 100-20 10 10 0 000 20zM12 6v6l4 2",
-                  WAITING_FOR_SUBMISSION: "M6 2h12M6 22h12M7 2v4l5 6-5 6v4M17 2v4l-5 6 5 6v4",
-                  SUBMISSION_RECEIVED: "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z",
-                  UNDER_CORRECTION: "M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z",
-                  APPOINTMENT_SCHEDULED: "M8 3v4M16 3v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z",
-                  PROCESSING: "M12 15a3 3 0 100-6 3 3 0 000 6zM12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3",
-                  VISA_ISSUED: "M12 22a10 10 0 100-20 10 10 0 000 20zM8 12l3 3 5-6",
-                  VISA_REJECTED: "M12 22a10 10 0 100-20 10 10 0 000 20zM15 9l-6 6M9 9l6 6",
-                  WITHDRAWN: "M9 21H5V3h4M16 17l5-5-5-5M21 12H9",
-                  OTHER: "M12 22a10 10 0 100-20 10 10 0 000 20zM12 16v-5M12 8h.01",
-                };
-                return (
-                  <li
-                    key={k}
-                    className="flex flex-col gap-2 rounded-xl border border-line bg-paper-raised p-3"
-                    style={{ borderLeftColor: hex, borderLeftWidth: 3 }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={hex} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d={STATUS_ICONS[k] || STATUS_ICONS.OTHER} />
-                      </svg>
-                      <span className="text-xl font-bold tabular-nums leading-none" style={{ color: hex }}>{count}</span>
-                    </div>
-                    <div>
-                      <p className="text-[12px] font-medium leading-tight text-ink-800">{VISA_STATUS_LABELS[k]}</p>
-                      <p className="text-[11px] text-mute tabular-nums">{pct}% of total</p>
-                    </div>
-                    <div className="h-1 rounded-full bg-paper-sunk overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${Math.max(4, pct)}%`, background: hex }} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <>
+              {/* One stacked bar: each segment is a stage, sized by its count */}
+              <div className="mb-4 flex h-2.5 overflow-hidden rounded-full bg-paper-sunk" role="img" aria-label="Applicants by status">
+                {funnelStatuses.filter(k => (d.statusCounts[k] ?? 0) > 0).map(k => (
+                  <span key={k} title={`${VISA_STATUS_LABELS[k]}: ${d.statusCounts[k]}`} style={{ flexGrow: d.statusCounts[k], background: VISA_STATUS_HEX[k] || "#888" }} />
+                ))}
+              </div>
+              <ul className="grid flex-1 auto-rows-fr gap-1.5">
+                {funnelStatuses.map(k => {
+                  const count = d.statusCounts[k] ?? 0;
+                  const hex = VISA_STATUS_HEX[k] || "#888";
+                  return (
+                    <li key={k} className={`relative flex min-h-[44px] items-center gap-3 overflow-hidden rounded-lg border border-line bg-paper-raised px-3 ${count === 0 ? "opacity-60" : ""}`}>
+                      <span className="absolute inset-y-0 left-0 opacity-15" style={{ width: `${(count / maxCount) * 100}%`, background: hex }} aria-hidden="true" />
+                      <span className="relative h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: hex }} aria-hidden="true" />
+                      <span className="relative min-w-0 flex-1 truncate text-[13px] font-medium text-ink-800">{VISA_STATUS_LABELS[k]}</span>
+                      <span className="relative text-lg font-bold tabular-nums leading-none">{count.toLocaleString("en-US")}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </div>
 
@@ -288,7 +270,7 @@ export default async function HomePage() {
               { icon: "M8 3v4M16 3v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z", label: "Appt. → decision", value: d.processing.avgAppointmentToDecision, color: "#2f7d57" },
             ].map(s => (
               <li key={s.label} className="flex items-center gap-3 rounded-lg bg-paper-sunk px-3 py-2.5">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-card">
                   <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={s.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d={s.icon} />
                   </svg>
@@ -440,7 +422,7 @@ export default async function HomePage() {
           <Link
             key={f.title}
             href={f.href}
-            className="card group flex flex-col gap-3 p-5 transition-colors hover:bg-white"
+            className="card group flex flex-col gap-3 p-5 transition-colors hover:bg-card"
           >
             <span className={`grid h-10 w-10 place-items-center rounded-xl ${f.tone}`}>
               <Icon name={f.icon} size={20} />

@@ -22,7 +22,7 @@ function parseDayRange(q: string): { gte: Date; lt: Date } | null {
   return { gte: start, lt: new Date(start.getTime() + 86400000) };
 }
 
-const SORTABLE = new Set(["publicId", "university", "consulate", "waitingListDate", "documentSubmissionDate", "appointmentDate", "visaStatus", "createdAt"]);
+const SORTABLE = new Set(["publicId", "university", "intake", "consulate", "waitingListDate", "documentSubmissionDate", "appointmentDate", "visaStatus", "createdAt"]);
 
 // GET /api/applicants — public dashboard data (approved only, unless admin)
 export async function GET(req: NextRequest) {
@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
   const university = searchParams.get("university") || undefined;
   const visaStatus = searchParams.get("visaStatus") || undefined;
   const consulate = searchParams.get("consulate") || undefined;
+  const intake = searchParams.get("intake")?.trim().slice(0, 40) || undefined; // "Winter", "Summer 2026", …
   const q = searchParams.get("q") || undefined;
   const approvalParam = searchParams.get("approval") || undefined;
   const month = searchParams.get("month") || undefined; // format: YYYY-MM, filters by waiting-list join month
@@ -57,6 +58,7 @@ export async function GET(req: NextRequest) {
 
   if (university) where.university = { contains: university, mode: "insensitive" };
   if (consulate) where.consulate = consulate;
+  if (intake) where.intake = { contains: intake, mode: "insensitive" };
   if (visaStatus) where.visaStatus = visaStatus;
   if (month) {
     const [yearStr, monthStr] = month.split("-");
@@ -173,6 +175,7 @@ export async function POST(req: NextRequest) {
     waitingListDate: data.waitingListDate ? new Date(data.waitingListDate) : null,
     submissionInviteDate: data.submissionInviteDate ? new Date(data.submissionInviteDate) : null,
     documentSubmissionDate: data.documentSubmissionDate ? new Date(data.documentSubmissionDate) : null,
+    correctionRequestDate: data.correctionRequestDate ? new Date(data.correctionRequestDate) : null,
     appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
     interviewDate: data.interviewDate ? new Date(data.interviewDate) : null,
     decisionDate: data.decisionDate ? new Date(data.decisionDate) : null,

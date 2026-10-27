@@ -71,3 +71,15 @@ Thumbs.db
 *.sublime-project
 *.swp
 *.swo
+
+# local image uploads (dev storage)
+.data/
+.next-*/
+
+# Third-party datasets (HRK export): kept local, not committed
+data/
+
+# Third-party datasets supplied locally (licence / personal data): never commit
+/.csv
+/rektorenliste.pdf
+/pressestellen.pdf

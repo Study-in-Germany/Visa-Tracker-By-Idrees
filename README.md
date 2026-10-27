@@ -134,3 +134,18 @@ This is an independent, community-run project. It is not affiliated with,
 endorsed by, or connected to the German Federal Foreign Office or any German
 consulate. All timeline estimates are unofficial and for general guidance
 only.
+
+## University directory & accommodation marketplace
+
+- **/universities**: searchable directory with Summer/Winter intake deadlines; admins manage records at **/admin/universities** (each programme can be stamped "checked on the official page").
+- **/accommodation**: students post rooms/apartments; admins approve, reject and handle reports at **/admin/accommodation**. Contact details are shown to signed-in users only. Editing an approved listing sends it back to review.
+- **Photos**: JPG/PNG/HEIC are validated by file signature, rotated, stripped of metadata and stored as three WebP sizes (320/800/1600 px) with Sharp. Configure the `S3_*` variables in `.env` (see `.env.example`); production refuses to start uploads without them.
+- **Migrations**: `prisma/migrations` holds the baseline (`0_init`) and the new tables. On a **new** database run `npm run db:migrate`. On an **existing** database created with `db push`, first run `npx prisma migrate resolve --applied 0_init`, then `npm run db:migrate`.
+- Tests: `npm test` (the Postgres test needs `TEST_DATABASE_URL`).
+
+### Importing universities and programmes
+
+- **Admin → Data imports** (`/admin/imports`): upload the HRK Hochschulkompass export, enrich with Wikidata logos/IDs, check websites (robots.txt respected), upload programme CSV/XLSX files (template included), and review conflicting deadlines. Jobs are resumable and logged.
+- **CLI**: `npm run import:universities -- path/to/export.tsv --wikidata --linkcheck`. Re-running updates records, never duplicates them, and never overwrites fields an admin edited.
+- **Schedule**: `vercel.json` calls `/api/cron/refresh` daily (set `CRON_SECRET`). It re-checks the oldest-checked websites and expires deadline confirmations older than 150 days.
+- Deadlines are only shown as confirmed when a source link is recorded and an admin or file marks them verified. Nothing is guessed.

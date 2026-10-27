@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDuration } from "@/lib/format";
 import { Suspense, useState } from "react";
 import dynamic from "next/dynamic";
 import PageHeader from "@/components/ui/PageHeader";
@@ -20,7 +21,7 @@ const MonthlyArea = dynamic(() => import("@/components/charts/MonthlyArea"), {
 });
 
 const pct = (n: number, total: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
-const dayText = (v: number | null) => (v === null ? "—" : `${v} d`);
+const dayText = (v: number | null) => formatDuration(v);
 
 function AnalyticsInner() {
   const [period, setPeriod] = usePeriod();
@@ -102,7 +103,7 @@ function AnalyticsInner() {
           </MetricCard>
 
           {/* 3 — waiting time */}
-          <MetricCard title="Typical total wait" value={endToEnd === null ? "—" : `${endToEnd} days`} pill="sum of stage averages" loading={first}>
+          <MetricCard title="Typical total wait" value={formatDuration(endToEnd)} pill="sum of stage averages" loading={first}>
             <ul className="space-y-2 border-t border-line pt-3 text-sm">
               {stages.map((s) => (
                 <li key={s.label} className="flex items-center justify-between">
@@ -187,7 +188,7 @@ function AnalyticsInner() {
                   </dl>
                 </div>
               ))}
-              <p className="text-xs text-mute">Average days to each stage.</p>
+              <p className="text-xs text-mute">Average time to each stage.</p>
             </div>
           </MetricCard>
         </div>

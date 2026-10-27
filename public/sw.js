@@ -1,10 +1,10 @@
 /* Service worker: static assets + offline fallback only.
  * API responses and HTML pages are never cached — they can contain
  * user-specific or admin-only data and must always come from the network. */
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `vt-static-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
-const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png"];
+const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));

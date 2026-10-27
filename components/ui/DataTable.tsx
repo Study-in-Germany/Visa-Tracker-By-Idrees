@@ -44,13 +44,19 @@ type Props<T> = {
   rowHref?: (row: T) => string;
   /** Render without its own card so it can sit inside a toolbar card. */
   embedded?: boolean;
+  /** Hex colour that washes the row (left rail + fading tint). */
+  rowAccent?: (row: T) => string | undefined;
 };
+
+const wash = (hex?: string): React.CSSProperties | undefined =>
+  hex ? { backgroundImage: `linear-gradient(90deg, ${hex}26 0%, ${hex}0d 45%, transparent 80%)` } : undefined;
+const rail = (hex?: string): React.CSSProperties | undefined => (hex ? { boxShadow: `inset 4px 0 0 ${hex}` } : undefined);
 
 const HIDE = { lg: "hidden lg:table-cell", xl: "hidden xl:table-cell" } as const;
 
 export default function DataTable<T>({
   columns, rows, rowKey, loading, error, onRetry, emptyTitle = "Nothing here yet", emptyHint,
-  sort, onSort, page = 1, pageCount = 1, total, onPage, actions, caption, embedded, rowHref,
+  sort, onSort, page = 1, pageCount = 1, total, onPage, actions, caption, embedded, rowHref, rowAccent,
 }: Props<T>) {
   const router = useRouter();
   const openRow = (e: React.MouseEvent, row: T) => {
@@ -68,7 +74,7 @@ export default function DataTable<T>({
 
   const shell = embedded ? "" : "card";
   if (error && rows.length === 0) return <div className={shell}><ErrorState error={error} onRetry={onRetry} /></div>;
-  if (loading && rows.length === 0) return <div className={`${shell} p-4`}><LoadingBlock label={`Loading ${caption}`} rows={5} /></div>;
+  if (loading && rows.length === 0) return <div className={`${shell} p-4`}><LoadingBlock label={`Loading ${caption}`} rows={10} /></div>;
   if (!loading && rows.length === 0) return <div className={shell}><EmptyState title={emptyTitle} hint={emptyHint} /></div>;
 
   const title = columns.find((c) => c.mobile === "title") ?? columns[0];
@@ -111,9 +117,9 @@ export default function DataTable<T>({
           </thead>
           <tbody className="divide-y divide-line">
             {rows.map((row) => (
-              <tr key={rowKey(row)} onClick={(e) => openRow(e, row)} className={`hover:bg-paper-sunk/40 ${rowHref ? "cursor-pointer" : ""}`}>
-                {columns.map((c) => (
-                  <td key={c.key} className={`px-3 py-2 align-middle ${c.align === "right" ? "text-right" : ""} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}>
+              <tr key={rowKey(row)} onClick={(e) => openRow(e, row)} style={wash(rowAccent?.(row))} className={`hover:brightness-95 ${rowHref ? "cursor-pointer" : ""}`}>
+                {columns.map((c, ci) => (
+                  <td key={c.key} style={ci === 0 ? rail(rowAccent?.(row)) : undefined} className={`px-3 py-2 align-middle ${c.align === "right" ? "text-right" : ""} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}>
                     {c.cell(row)}
                   </td>
                 ))}

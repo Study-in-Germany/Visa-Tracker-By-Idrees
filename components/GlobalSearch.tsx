@@ -87,8 +87,8 @@ export default function GlobalSearch() {
   const show = open && text.trim().length >= 2;
 
   return (
-    <div ref={wrap} className="relative w-40 sm:w-72">
-      <Icon name="search" size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-mute" />
+    <div ref={wrap} className="relative w-full min-w-0 max-w-sm flex-1">
+      <Icon name="search" size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
       <input
         ref={input}
         type="search"
@@ -99,7 +99,7 @@ export default function GlobalSearch() {
         placeholder="Search ID, university, embassy…"
         aria-label="Search applicants"
         autoComplete="off"
-        className="h-8 w-full rounded-lg border border-line bg-paper-raised pl-8 pr-7 text-xs placeholder:text-mute focus:border-ink-600 focus:ring-1 focus:ring-ink-600 [&::-webkit-search-cancel-button]:hidden"
+        className="h-10 w-full rounded-xl border border-line-strong bg-paper-raised pl-9 pr-8 text-[13px] placeholder:text-mute focus:border-ink-600 focus:ring-1 focus:ring-ink-600 [&::-webkit-search-cancel-button]:hidden"
       />
       <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-line px-1.5 text-[10px] text-mute sm:block">/</kbd>
 

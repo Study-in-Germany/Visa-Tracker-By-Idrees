@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Icon from "@/components/ui/Icon";
 import { prisma } from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, formatDuration } from "@/lib/format";
 import { JOURNEY_STAGES, VISA_STATUS_LABELS, VISA_STATUS_HEX } from "@/lib/constants";
 import { estimateNextStage } from "@/lib/eta";
 
@@ -148,9 +148,9 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
           <div className="flex flex-wrap gap-2 shrink-0">
             {daysWaiting !== null && (
               <div className="rounded-xl border border-line bg-paper-sunk px-4 py-2.5 text-center min-w-[80px]">
-                <p className="text-xl font-bold tabular-nums leading-none">{daysWaiting}</p>
+                <p className="text-base font-bold leading-tight">{formatDuration(daysWaiting)}</p>
                 <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-mute">
-                  {isActive ? "Days waiting" : "Days total"}
+                  {isActive ? "Waiting" : "Total time"}
                 </p>
               </div>
             )}
@@ -253,7 +253,7 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
                         )}
                       </p>
                       {gap !== null && gap > 0 && (
-                        <p className="text-[11px] text-mute">+{gap} days from previous</p>
+                        <p className="text-[11px] text-mute">+{formatDuration(gap)} from previous</p>
                       )}
                     </div>
 
@@ -345,7 +345,7 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
                   {fmtDate(eta.latest.toISOString())}
                 </p>
                 <p className="mt-2 text-xs text-mute">
-                  Based on {eta.sampleSize} similar {eta.sampleSize === 1 ? "case" : "cases"} at {applicant.consulate}. Median wait: {eta.medianGapDays} days.
+                  Based on {eta.sampleSize} similar {eta.sampleSize === 1 ? "case" : "cases"} at {applicant.consulate}. Median wait: {formatDuration(eta.medianGapDays)}.
                 </p>
                 <p className="mt-2 rounded-lg bg-paper-sunk px-3 py-2 text-[11px] text-mute leading-relaxed">
                   Unofficial estimate from community data only — not a commitment from the consulate.

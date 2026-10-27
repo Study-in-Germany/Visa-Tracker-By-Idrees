@@ -3,13 +3,15 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import PageHeader from "@/components/ui/PageHeader";
+import Greeting from "@/components/ui/Greeting";
 import Panel from "@/components/ui/Panel";
 import StatCard from "@/components/ui/StatCard";
 import Icon from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { ErrorState, LoadingBlock } from "@/components/ui/States";
 import StatusBadge from "@/components/StatusBadge";
+import MilestoneEditor from "@/components/tracker/MilestoneEditor";
+import { invalidateApi } from "@/hooks/useApi";
 import { useApi } from "@/hooks/useApi";
 import { fmtDate } from "@/lib/format";
 import { APPROVAL_COLORS, APPROVAL_LABELS, ACTIVE_STATUSES, JOURNEY_STAGES } from "@/lib/constants";
@@ -57,10 +59,9 @@ export default function MyJourneyPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow={a.publicId}
-        title={a.name}
-        description={[a.university, a.consulate && `${a.consulate} embassy`].filter(Boolean).join(" · ")}
+      <Greeting
+        name={String(a.name || "there").split(" ")[0]}
+        subtitle={[a.publicId, a.university, a.consulate && `${a.consulate} embassy`].filter(Boolean).join(" · ")}
         actions={
           <>
             <StatusBadge status={a.visaStatus} />
@@ -70,7 +71,7 @@ export default function MyJourneyPage() {
       />
 
       <section aria-label="Summary" className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon="clock" tone="warn" label={active ? "Days waiting" : "Days in process"} value={waitingDays} hint={a.waitingListDate ? `since ${fmtDate(a.waitingListDate)}` : "add your waiting-list date"} />
+        <StatCard icon="clock" tone="warn" format="days" label={active ? "Waiting so far" : "Time in process"} value={waitingDays} hint={a.waitingListDate ? `since ${fmtDate(a.waitingListDate)}` : "add your waiting-list date"} />
         <StatCard icon="checkCircle" tone="good" label="Stages recorded" value={done} hint={`of ${stages.length}`} />
         <StatCard icon="send" tone="sage" label="Status updates" value={a.history?.length ?? 0} />
         <StatCard icon="edit" tone="neutral" label="Last edited (days ago)" value={lastUpdateDays} />
@@ -92,7 +93,7 @@ export default function MyJourneyPage() {
               return (
                 <li
                   key={s.key}
-                  className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${
+                  className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2.5 ${
                     s.date ? "border-line bg-paper-raised" : isNext ? "border-clay-400/50 bg-clay-50/60" : "border-dashed border-line-strong bg-transparent"
                   }`}
                 >
@@ -104,6 +105,7 @@ export default function MyJourneyPage() {
                     {gaps[i] !== null && gaps[i]! > 0 && <span className="hidden rounded bg-paper-sunk px-1.5 py-0.5 text-[11px] tabular-nums text-mute sm:inline">+{gaps[i]} d</span>}
                     <span className={`text-[13px] tabular-nums ${s.date ? "" : "text-mute"}`}>{s.date ? fmtDate(s.date) : isNext ? "Next" : "Not yet"}</span>
                   </span>
+                  <MilestoneEditor milestone={s.key} label={s.label} date={s.date} onSaved={() => { invalidateApi("/api/applicant/me"); reload(); }} />
                 </li>
               );
             })}
@@ -142,7 +144,7 @@ export default function MyJourneyPage() {
             )}
           </Panel>
 
-          <Link href="/dashboard/updates" className="card flex items-center justify-between p-3.5 transition-colors hover:bg-white">
+          <Link href="/dashboard/updates" className="card flex items-center justify-between p-3.5 transition-colors hover:bg-card">
             <span className="flex items-center gap-2.5">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-paper-sunk text-ink-700"><Icon name="bell" size={16} /></span>
               <span>

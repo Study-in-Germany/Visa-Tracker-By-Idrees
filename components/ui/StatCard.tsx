@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Icon, { IconName } from "./Icon";
 import { Skeleton } from "./States";
+import { formatDuration } from "@/lib/format";
 
 export type StatFormat = "number" | "days" | "percent";
 export type StatTone = "neutral" | "good" | "bad" | "warn" | "accent" | "sage";
@@ -24,18 +25,19 @@ export type StatCardProps = {
 
 export function formatStat(value: number | null | undefined, format: StatFormat = "number") {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (format === "days") return formatDuration(value);
   if (format === "percent") return `${Math.round(value)}%`;
   return Math.round(value).toLocaleString("en-US");
 }
 
-// tinted icon tile + matching status dot (no blue / purple)
-const TONES: Record<StatTone, { tile: string; dot: string }> = {
-  neutral: { tile: "bg-paper-sunk text-ink-700", dot: "bg-ink-300" },
-  sage: { tile: "bg-ink-50 text-ink-600", dot: "bg-ink-600" },
-  good: { tile: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
-  bad: { tile: "bg-red-50 text-red-600", dot: "bg-red-500" },
-  warn: { tile: "bg-ochre-50 text-ochre-700", dot: "bg-ochre-500" },
-  accent: { tile: "bg-clay-50 text-clay-500", dot: "bg-clay-500" },
+// solid icon tile + top accent per tone, aligned with the status palette
+const TONES: Record<StatTone, { tile: string; dot: string; bar: string }> = {
+  neutral: { tile: "bg-slate-100 text-slate-700", dot: "bg-slate-400", bar: "bg-slate-300" },
+  sage: { tile: "bg-ink-100 text-ink-700", dot: "bg-ink-600", bar: "bg-ink-600" },
+  good: { tile: "bg-green-100 text-green-700", dot: "bg-green-500", bar: "bg-green-500" },
+  bad: { tile: "bg-red-100 text-red-700", dot: "bg-red-500", bar: "bg-red-500" },
+  warn: { tile: "bg-amber-100 text-amber-700", dot: "bg-amber-500", bar: "bg-amber-500" },
+  accent: { tile: "bg-clay-100 text-clay-600", dot: "bg-clay-500", bar: "bg-clay-500" },
 };
 
 function Trend({ trend }: { trend: NonNullable<StatCardProps["trend"]> }) {
@@ -54,7 +56,7 @@ function Trend({ trend }: { trend: NonNullable<StatCardProps["trend"]> }) {
 export default function StatCard({ label, value, format = "number", icon, tone = "neutral", variant = "tile", trend, hint, loading, href }: StatCardProps) {
   const t = TONES[tone];
   const figure = formatStat(value, format);
-  const suffix = format === "days" && value != null ? <span className="ml-1 text-sm font-medium text-mute">d</span> : null;
+  const suffix = null;
   const wide = variant === "wide";
 
   const tile = (
@@ -64,7 +66,9 @@ export default function StatCard({ label, value, format = "number", icon, tone =
   );
   const dot = <span className={`h-2 w-2 shrink-0 rounded-full ${t.dot}`} aria-hidden="true" />;
 
-  const cls = `card block h-full ${"p-3.5"} ${href ? "transition-colors hover:bg-white" : ""}`;
+  const cls = `card relative block h-full overflow-hidden p-3.5 ${wide ? "min-h-[68px]" : "min-h-[104px]"}${href ? "transition-shadow hover:shadow-md" : ""}`;
+
+  const bar = <span className={`absolute inset-x-0 top-0 h-[3px] ${t.bar}`} aria-hidden="true" />;
 
   const body = loading ? (
     <div className="space-y-3" aria-busy="true">
@@ -111,8 +115,8 @@ export default function StatCard({ label, value, format = "number", icon, tone =
   );
 
   return href ? (
-    <Link href={href} className={cls}>{body}</Link>
+    <Link href={href} className={cls}>{bar}{body}</Link>
   ) : (
-    <div className={cls}>{body}</div>
+    <div className={cls}>{bar}{body}</div>
   );
 }

@@ -11,7 +11,7 @@ import Icon from "@/components/ui/Icon";
 import { Notice } from "@/components/ui/States";
 import { apiFetch, jsonInit } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
-import Checkbox from "@/components/ui/Checkbox";
+import Toggle from "@/components/ui/Toggle";
 import IntakeSelect from "@/components/IntakeSelect";
 import { CONSULATE_FIELD_OPTIONS, GENDER_OPTIONS, PROVINCE_OPTIONS, VISA_TYPE_OPTIONS } from "@/lib/options";
 import { GENDER_LABELS } from "@/lib/constants";
@@ -20,7 +20,7 @@ const initialForm = {
   name: "", email: "", gender: "", city: "", province: "",
   university: "", program: "", intake: "", visaType: "",
   consulate: "Islamabad", sourceOfInformation: "", additionalDocuments: "",
-  waitingListDate: "", submissionInviteDate: "", documentSubmissionDate: "",
+  waitingListDate: "", submissionInviteDate: "", documentSubmissionDate: "", correctionRequestDate: "",
   appointmentDate: "", interviewDate: "", decisionDate: "",
 };
 type Form = typeof initialForm;
@@ -29,6 +29,7 @@ const JOURNEY: { key: keyof Form; label: string }[] = [
   { key: "waitingListDate", label: "Waiting-list registration" },
   { key: "submissionInviteDate", label: "Submission invitation" },
   { key: "documentSubmissionDate", label: "Documents submitted" },
+  { key: "correctionRequestDate", label: "Correction requested" },
   { key: "appointmentDate", label: "Appointment booked" },
   { key: "interviewDate", label: "Interview" },
   { key: "decisionDate", label: "Visa received" },
@@ -66,7 +67,7 @@ export default function SubmitPage() {
   const [form, setForm] = useState<Form>(initialForm);
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
-  const [anonymous, setAnonymous] = useState(true);
+  const [anonymous, setAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ publicId: string; accessCode: string } | null>(null);
@@ -165,55 +166,40 @@ export default function SubmitPage() {
 
   const filled = JOURNEY.filter((j) => form[j.key]).length;
   const last = step === STEPS.length - 1;
+  const actions = (
+    <>
+      <button className="btn-gold !min-h-[46px] flex-1 lg:w-full lg:flex-none" disabled={loading}>
+        {last ? (loading ? "Submitting…" : "Submit entry") : <>Next <Icon name="chevronRight" size={14} /></>}
+      </button>
+      {step > 0 && (
+        <button type="button" onClick={() => go(step - 1)} className="btn-secondary !min-h-[46px] lg:w-full">
+          <Icon name="chevronLeft" size={14} /> Back
+        </button>
+      )}
+    </>
+  );
 
   return (
     <>
       <div ref={top} className="scroll-mt-16" />
-      <PageHeader title="Submit your visa journey" description="Your entry stays private until an admin approves it, then appears on the public tracker." />
+      <PageHeader title="Submit your visa journey" />
 
-      {/* Stepper: numbered pills on larger screens, compact bar on phones */}
-      <nav aria-label="Progress" className="mb-4">
-        <ol className="hidden gap-2 sm:grid sm:grid-cols-4">
-          {STEPS.map((s, i) => {
-            const done = i < step;
-            const active = i === step;
-            return (
-              <li key={s.title}>
-                <button
-                  type="button"
-                  disabled={i > step}
-                  onClick={() => i < step && go(i)}
-                  aria-current={active ? "step" : undefined}
-                  className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors ${active ? "border-ink-800 bg-paper-raised" : "border-line bg-paper-raised/60"} ${done ? "hover:bg-paper-raised" : ""} disabled:cursor-default`}
-                >
-                  <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${done ? "bg-emerald-600 text-white" : active ? "bg-ink-800 text-paper-raised" : "bg-paper-sunk text-mute"}`}>
-                    {done ? <Icon name="check" size={13} strokeWidth={3} /> : i + 1}
-                  </span>
-                  <span className="min-w-0">
-                    <span className={`block truncate text-[13px] font-medium ${active ? "" : "text-ink-700"}`}>{s.title}</span>
-                    <span className="block truncate text-[11px] text-mute">{s.hint}</span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-        <div className="sm:hidden">
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm font-semibold">{STEPS[step].title}</span>
-            <span className="text-xs text-mute">Step {step + 1} of {STEPS.length}</span>
-          </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-sunk">
-            <div className="h-full rounded-full bg-clay-500 transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
-          </div>
+      {/* Phones: one slim progress bar. Larger screens show the step list beside the form. */}
+      <div className="mb-4 lg:hidden" role="group" aria-label="Progress">
+        <div className="flex items-baseline justify-between">
+          <span className="text-[15px] font-semibold">{STEPS[step].title}</span>
+          <span className="text-xs text-mute">Step {step + 1} of {STEPS.length}</span>
         </div>
-      </nav>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-sunk" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step + 1}>
+          <div className="h-full rounded-full bg-clay-500 transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+        </div>
+      </div>
 
-      <form onSubmit={onSubmit} noValidate className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <form onSubmit={onSubmit} noValidate className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0">
           {step === 0 && (
-            <Panel title="About you" description="Your name stays hidden on the public tracker if you choose to be anonymous later.">
-              <div className="grid gap-3 sm:grid-cols-2">
+            <StepPanel tip="Your name stays private on the public tracker unless you choose otherwise on the last step. Your email is never shown." title="Let's start with you" description="You can hide your name from the public tracker on the last step.">
+              <div className="grid gap-5 sm:grid-cols-2">
                 {text("name", "Full name", { required: true, autoComplete: "name" })}
                 {text("email", "Email", { type: "email", placeholder: "Private, for status updates", autoComplete: "email" })}
                 <Field label="Gender" htmlFor="s-gender">
@@ -224,12 +210,12 @@ export default function SubmitPage() {
                   <Select id="s-province" label="Province" value={form.province} onChange={(v) => set("province", v)} options={PROVINCE_OPTIONS} placeholder="Select province" clearable />
                 </Field>
               </div>
-            </Panel>
+            </StepPanel>
           )}
 
           {step === 1 && (
-            <Panel title="Program" description="All optional. Add what you know.">
-              <div className="grid gap-3 sm:grid-cols-2">
+            <StepPanel tip="Not sure about something? Leave it empty. You can add or change these details later from your dashboard." title="Where are you going?" description="Everything here is optional. Add what you know.">
+              <div className="grid gap-5 sm:grid-cols-2">
                 {text("university", "University")}
                 {text("program", "Degree / program")}
                 <Field label="Intake" htmlFor="s-intake-season">
@@ -239,12 +225,12 @@ export default function SubmitPage() {
                   <Select id="s-visaType" label="Visa type" value={form.visaType} onChange={(v) => set("visaType", v)} options={VISA_TYPE_OPTIONS} placeholder="Select visa type" clearable />
                 </Field>
               </div>
-            </Panel>
+            </StepPanel>
           )}
 
           {step === 2 && (
-            <Panel title="Visa journey" description="Fill in what has happened so far and leave the rest empty. Use × on a date to clear it.">
-              <div className="grid gap-3 sm:grid-cols-2">
+            <StepPanel tip="Enter the dates you have. Dates in the wrong order are flagged so you can catch typos before submitting." title="Your visa journey" description="Fill in the dates that have happened and leave the rest empty.">
+              <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Embassy" htmlFor="s-consulate" required className="sm:col-span-2">
                   <Select id="s-consulate" label="Embassy" value={form.consulate} onChange={(v) => set("consulate", v)} options={CONSULATE_FIELD_OPTIONS} />
                 </Field>
@@ -257,7 +243,7 @@ export default function SubmitPage() {
                   </div>
                 ))}
               </div>
-            </Panel>
+            </StepPanel>
           )}
 
           {step === 3 && (
@@ -316,12 +302,8 @@ export default function SubmitPage() {
               </Panel>
 
               <Panel title="Privacy">
-                <Checkbox
-                  checked={anonymous}
-                  onChange={setAnonymous}
-                  label="Hide my name on the public tracker"
-                  description="Your Tracking ID, university and dates stay visible. Your email is never shown."
-                />
+                <Toggle checked={anonymous} onChange={setAnonymous} label="Hide my name on the public tracker" />
+                <p className="mt-2 text-xs text-mute">{anonymous ? "Your name will be hidden on the public tracker. Your Tracking ID, university and dates stay visible." : "Your name will be shown on the public tracker. Turn this on to hide it. Your email is never shown."}</p>
                 <p className="mt-2 flex items-start gap-1.5 text-xs text-mute">
                   <Icon name="shield" size={13} className="mt-0.5 shrink-0" />
                   An admin reviews every entry before it appears publicly. You can change these settings later from your dashboard.
@@ -332,34 +314,71 @@ export default function SubmitPage() {
 
           {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}
 
-          {/* Sticky action bar keeps Back / Next under the thumb on phones */}
-          <div className="sticky bottom-0 z-10 -mx-3 mt-3 flex items-center justify-between gap-2 border-t border-line bg-paper/95 px-3 py-3 backdrop-blur sm:-mx-5 sm:px-5 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none">
-            <button type="button" onClick={() => go(step - 1)} disabled={step === 0} className="btn-secondary min-w-[88px] disabled:invisible">
-              <Icon name="chevronLeft" size={14} /> Back
-            </button>
-            <button className="btn-gold min-w-[120px] flex-1 sm:flex-none" disabled={loading}>
-              {last ? (loading ? "Submitting…" : "Submit entry") : <>Next <Icon name="chevronRight" size={14} /></>}
-            </button>
+          {/* Phones: Back / Next stay under the thumb, above the bottom navigation */}
+          <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 -mx-3 mt-4 flex flex-row-reverse items-center gap-2 border-t border-line bg-paper/95 px-3 py-3 backdrop-blur sm:-mx-5 sm:px-5 lg:hidden">
+            {actions}
           </div>
         </div>
 
-        <aside className="hidden space-y-3 lg:sticky lg:top-16 lg:block">
-          <Panel title="Dates recorded">
-            <p className="text-2xl font-semibold tabular-nums">{filled}<span className="text-sm font-medium text-mute"> / {JOURNEY.length}</span></p>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-sunk">
-              <div className="h-full rounded-full bg-clay-500 transition-all" style={{ width: `${(filled / JOURNEY.length) * 100}%` }} />
+        <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block">
+          <div className="card space-y-4 p-4">
+            <div>
+              <div className="flex items-baseline justify-between">
+                <h2 className="text-[14px] font-semibold">Your progress</h2>
+                <span className="text-xs tabular-nums text-mute">{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-sunk" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step + 1}>
+                <div className="h-full rounded-full bg-clay-500 transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+              </div>
             </div>
-          </Panel>
-          <Panel title="What happens next">
+            <ol className="space-y-1">
+              {STEPS.map((st, i) => (
+                <li key={st.title}>
+                  <button type="button" disabled={i > step} onClick={() => i < step && go(i)} aria-current={i === step ? "step" : undefined} className="flex min-h-[36px] w-full items-center gap-2.5 rounded-lg px-1.5 text-left text-[13px] disabled:cursor-default">
+                    <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold ${i < step ? "bg-emerald-600 text-white" : i === step ? "bg-ink-800 text-paper-raised" : "bg-paper-sunk text-mute"}`}>
+                      {i < step ? <Icon name="check" size={11} strokeWidth={3} /> : i + 1}
+                    </span>
+                    <span className={i === step ? "font-semibold" : i < step ? "text-ink-700" : "text-mute"}>{st.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+            <div className="flex flex-col gap-2 border-t border-line pt-4">{actions}</div>
+          </div>
+          {step === 2 && (
+            <div className="card p-4">
+              <p className="text-2xl font-semibold tabular-nums">{filled}<span className="text-sm font-medium text-mute"> / {JOURNEY.length} dates</span></p>
+              <p className="mt-1 text-xs text-mute">Add what has happened so far. You can update the rest later.</p>
+            </div>
+          )}
+          <div className="card p-4">
+            <h2 className="mb-2 text-[14px] font-semibold">What happens next</h2>
             <ol className="space-y-2 text-[13px] text-ink-700">
-              <li className="flex gap-2"><span className="font-semibold text-clay-500">1</span> An admin reviews your entry.</li>
+              <li className="flex gap-2"><span className="font-semibold text-clay-500">1</span> An admin checks your entry.</li>
               <li className="flex gap-2"><span className="font-semibold text-clay-500">2</span> You get a Tracking ID and access code.</li>
               <li className="flex gap-2"><span className="font-semibold text-clay-500">3</span> Log in any time to update your dates.</li>
             </ol>
-          </Panel>
+          </div>
         </aside>
       </form>
     </>
+  );
+}
+
+/** A step of the form. Fills the available height (so the page never looks half empty), with a tip pinned to the bottom. */
+function StepPanel({ title, description, tip, children }: { title: string; description?: string; tip?: string; children: React.ReactNode }) {
+  return (
+    <section className="card flex min-h-[55dvh] flex-col p-5 sm:p-6 lg:min-h-[calc(100dvh-11rem)]">
+      <h2 className="text-[18px] font-semibold tracking-tight">{title}</h2>
+      {description && <p className="mt-1 text-[14px] text-mute">{description}</p>}
+      <div className="mt-6 [&_.input]:min-h-[48px] [&_button[role=combobox]]:min-h-[48px]">{children}</div>
+      {tip && (
+        <p className="mt-8 flex gap-2.5 rounded-xl bg-paper-sunk px-4 py-3 text-[13px] leading-relaxed text-ink-700 lg:mt-auto">
+          <Icon name="info" size={16} className="mt-0.5 shrink-0" />
+          {tip}
+        </p>
+      )}
+    </section>
   );
 }
 

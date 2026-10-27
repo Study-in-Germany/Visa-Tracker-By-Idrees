@@ -38,24 +38,24 @@ enum Gender {
 }
 
 model Applicant {
-  id                String        @id @default(cuid())
-  publicId          String        @unique
-  accessCodeHash    String        // hashed access code, paired with publicId for applicant self-login
+  id             String @id @default(cuid())
+  publicId       String @unique
+  accessCodeHash String // hashed access code, paired with publicId for applicant self-login
 
-  name              String
-  email             String?
-  gender            Gender?
-  city              String?
-  province          String?
-  university        String?
-  program           String?
-  intake            String?
-  visaType          String?
-  consulate         String        @default("Islamabad")
+  name                String
+  email               String?
+  gender              Gender?
+  city                String?
+  province            String?
+  university          String?
+  program             String?
+  intake              String?
+  visaType            String?
+  consulate           String  @default("Islamabad")
   waitingListCategory String?
   sourceOfInformation String?
   additionalDocuments String?
-  notes             String?
+  notes               String?
 
   waitingListDate         DateTime?
   submissionInviteDate    DateTime?
@@ -66,19 +66,23 @@ model Applicant {
   interviewDate           DateTime?
   decisionDate            DateTime?
 
-  visaStatus        VisaStatus    @default(WAITING_LIST)
-  approval          ApprovalState @default(PENDING_REVIEW)
-  isAnonymous       Boolean       @default(true)
+  visaStatus  VisaStatus    @default(WAITING_LIST)
+  approval    ApprovalState @default(PENDING_REVIEW)
+  isAnonymous Boolean       @default(true)
 
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  history           StatusEvent[]
+  history       StatusEvent[]
+  listings      Listing[]
+  listingImages ListingImage[]
 
   @@index([approval])
   @@index([visaStatus])
   @@index([university])
   @@index([consulate])
+  @@index([approval, waitingListDate])
+  @@index([approval, visaStatus])
 }
 
 model StatusEvent {
@@ -87,6 +91,9 @@ model StatusEvent {
   applicantId String
   visaStatus  VisaStatus
   note        String?
+  /// Set when the event records an edited journey milestone (e.g. "appointmentDate") rather than a status change.
+  milestone   String?
+  eventDate   DateTime?
   occurredAt  DateTime   @default(now())
 
   @@index([applicantId])
@@ -107,4 +114,286 @@ model AdminUser {
   email        String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
+}
+
+// ───────────── University directory ─────────────
+
+enum DegreeLevel {
+  BACHELOR
+  MASTER
+  PHD
+}
+
+enum Intake {
+  SUMMER
+  WINTER
+}
+
+model University {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  city        String
+  state       String?
+  website     String
+  description String?
+  published   Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  programmes  Programme[]
+
+  /// HRK Hochschulkompass institution number; the natural key used to de-duplicate imports.
+  hrkNumber        Int?      @unique
+  shortName        String?
+  /// e.g. "Universitäten", "Fachhochschulen / HAW"
+  institutionType  String?
+  sponsorship      String?
+  studentCount     Int?
+  foundedYear      Int?
+  doctorateRight   Boolean?
+  logoUrl          String?
+  wikidataId       String?   @unique
+  /// Where the record came from, e.g. "HRK Hochschulkompass 2026-10-27".
+  source           String?
+  sourceUrl        String?
+  /// Fields an admin edited by hand; imports never overwrite these.
+  lockedFields     String[]  @default([])
+  lastVerifiedAt   DateTime?
+  websiteStatus    Int?
+  websiteCheckedAt DateTime?
+
+  @@index([city])
+  @@index([published])
+}
+
+model Programme {
+  id                      String             @id @default(cuid())
+  university              University         @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  universityId            String
+  name                    String
+  degreeLevel             DegreeLevel
+  language                String?
+  intakes                 Intake[]
+  summerDeadline          DateTime?
+  winterDeadline          DateTime?
+  website                 String?
+  /// Last time an admin confirmed the deadlines against the official page.
+  deadlinesVerifiedAt     DateTime?
+  tuitionNote             String?
+  applicationMethod       String?
+  applicationUrl          String?
+  /// Subject area, e.g. "Computer Science".
+  field                   String?
+  durationSemesters       Int?
+  /// Deadlines above (summerDeadline / winterDeadline) are for international (non-EU) applicants; EU applicants are separate.
+  euSummerDeadline        DateTime?
+  euWinterDeadline        DateTime?
+  /// Direct application, uni-assist, VPD, or another route.
+  applicationRoute        ApplicationRoute?
+  ieltsOverall            Float?
+  ieltsMinSection         Float?
+  /// Other accepted tests and notes, e.g. "TOEFL iBT 88, Cambridge C1".
+  languageCertificates    String?
+  ectsRequired            Int?
+  minGpaNote              String?
+  requiresGre             Boolean?
+  workExperienceNote      String?
+  /// Further admission requirements (documents, subject background, motivation letter, …).
+  requirements            String?
+  /// NC-free or restricted, eligibility notes and other important conditions.
+  remarks                 String?
+  admissionRestricted     Boolean?
+  tuitionFree             Boolean?
+  tuitionFeeEur           Int?
+  semesterContributionEur Int?
+  /// Reference to the same programme in the DAAD database. Only a link; DAAD content itself is not copied.
+  daadId                  Int?
+  daadUrl                 String?
+  lastCheckedAt           DateTime?
+  /// HTTP status of the last link check across the programme's source links (0 = unreachable).
+  linkStatus              Int?
+  /// Page the data was taken from.
+  sourceUrl               String?
+  /// UNVERIFIED data is shown with a warning; NEEDS_REVIEW is hidden until an admin confirms it.
+  verification            VerificationStatus @default(UNVERIFIED)
+  lockedFields            String[]           @default([])
+  /// Imported values that conflict with verified data; waits for an admin to accept or reject.
+  pendingChange           Json?
+  published               Boolean            @default(true)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  @@unique([universityId, name, degreeLevel])
+  @@index([verification])
+  @@index([universityId])
+  @@index([degreeLevel])
+  @@index([field])
+  @@index([applicationRoute])
+  @@index([daadId])
+  @@index([published])
+}
+
+// ───────────── Accommodation marketplace ─────────────
+
+enum ListingKind {
+  OFFERING
+  SEEKING
+}
+
+enum GenderPreference {
+  ANY
+  FEMALE
+  MALE
+}
+
+enum ListingType {
+  ROOM
+  SHARED_ROOM
+  STUDIO
+  APARTMENT
+}
+
+enum ListingStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  RENTED
+}
+
+enum ReportReason {
+  SCAM
+  INACCURATE
+  UNAVAILABLE
+  INAPPROPRIATE
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model Listing {
+  id               String           @id @default(cuid())
+  owner            Applicant        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId          String
+  title            String
+  description      String
+  type             ListingType
+  city             String
+  district         String?
+  rentEur          Int?
+  /// OFFERING: a place for rent. SEEKING: a student looking for a place (rentEur is then their budget).
+  kind             ListingKind      @default(OFFERING)
+  anmeldung        Boolean          @default(false)
+  minStayMonths    Int?
+  sizeSqm          Int?
+  genderPreference GenderPreference @default(ANY)
+  depositEur       Int?
+  billsIncluded    Boolean          @default(false)
+  furnished        Boolean          @default(false)
+  availableFrom    DateTime
+  contactName      String
+  contactPhone     String?
+  contactEmail     String?
+  status           ListingStatus    @default(PENDING_REVIEW)
+  rejectionReason  String?
+  approvedAt       DateTime?
+  rentedAt         DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  images  ListingImage[]
+  reports ListingReport[]
+
+  @@index([status, createdAt])
+  @@index([status, city])
+  @@index([status, rentEur])
+  @@index([status, kind])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id         String    @id @default(cuid())
+  listing    Listing?  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId  String?
+  owner      Applicant @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId    String
+  position   Int       @default(0)
+  /// Storage folder holding the three WebP variants; used to delete them together.
+  storageKey String
+  thumbUrl   String
+  cardUrl    String
+  fullUrl    String
+  width      Int
+  height     Int
+  bytes      Int
+  createdAt  DateTime  @default(now())
+
+  @@index([listingId, position])
+  @@index([ownerId, createdAt])
+}
+
+model ListingReport {
+  id          String       @id @default(cuid())
+  listing     Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId   String
+  /// Applicant id, or a salted hash of the IP for signed-out reporters; one report each per listing.
+  reporterKey String
+  reason      ReportReason
+  details     String?
+  status      ReportStatus @default(OPEN)
+  resolvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@unique([listingId, reporterKey])
+  @@index([status, createdAt])
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  NEEDS_REVIEW
+}
+
+enum ImportJobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+/// A resumable batch job (university import, enrichment, link check, programme file import).
+model ImportJob {
+  id         String          @id @default(cuid())
+  kind       String
+  status     ImportJobStatus @default(QUEUED)
+  total      Int             @default(0)
+  processed  Int             @default(0)
+  created    Int             @default(0)
+  updated    Int             @default(0)
+  skipped    Int             @default(0)
+  failed     Int             @default(0)
+  /// Position to resume from after an interruption.
+  cursor     Int             @default(0)
+  /// Input for the job (e.g. parsed rows or options) so it can resume without the original upload.
+  payload    Json?
+  /// Last log lines (capped) for the admin dashboard.
+  log        Json            @default("[]")
+  error      String?
+  startedBy  String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  finishedAt DateTime?
+
+  @@index([kind, status])
+  @@index([createdAt])
+}
+
+enum ApplicationRoute {
+  DIRECT
+  UNI_ASSIST
+  VPD
+  OTHER
 }
