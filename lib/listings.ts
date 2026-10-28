@@ -76,3 +76,17 @@ export async function purgeStaleUploads(ownerId: string) {
 
 /** Whether a listing may be shown to someone who is neither its owner nor an admin. */
 export const isPublic = (status: string) => status === "APPROVED" || status === "RENTED";
+
+/** Listings need an owning account. Ones posted by an admin belong to this hidden "team" account (never approved, so never public). */
+export const TEAM_PUBLIC_ID = "TEAM-LISTINGS";
+export async function getTeamOwnerId(): Promise<string> {
+  const existing = await prisma.applicant.findUnique({ where: { publicId: TEAM_PUBLIC_ID }, select: { id: true } });
+  if (existing) return existing.id;
+  const { randomBytes } = await import("node:crypto");
+  const bcrypt = (await import("bcryptjs")).default;
+  const created = await prisma.applicant.create({
+    data: { publicId: TEAM_PUBLIC_ID, accessCodeHash: await bcrypt.hash(randomBytes(24).toString("hex"), 10), name: "Visa Tracker team", consulate: "Islamabad", approval: "REJECTED", isAnonymous: true },
+    select: { id: true },
+  });
+  return created.id;
+}

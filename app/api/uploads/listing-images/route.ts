@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { apiError, getActor, unauthorized } from "@/lib/permissions";
 import { IMAGE_LIMITS, ImageError, processImage } from "@/lib/images";
 import { getStorage } from "@/lib/storage";
-import { deleteImageFiles, purgeStaleUploads } from "@/lib/listings";
+import { deleteImageFiles, getTeamOwnerId, purgeStaleUploads } from "@/lib/listings";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
   else {
     const listingId = String(form?.get("listingId") ?? "");
     const target = listingId ? await prisma.listing.findUnique({ where: { id: listingId }, select: { ownerId: true } }) : null;
-    if (!target) return apiError("Open a listing to add photos to it.", 400);
-    ownerId = target.ownerId;
+    // No listing yet means the admin is creating a new one, which belongs to the team account.
+    ownerId = target ? target.ownerId : await getTeamOwnerId();
   }
 
   await purgeStaleUploads(ownerId);

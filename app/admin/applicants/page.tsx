@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable, { Column, SortState } from "@/components/ui/DataTable";
 import DateRangePicker from "@/components/ui/DateRangePicker";
@@ -12,6 +12,7 @@ import { LoadingBlock, Notice } from "@/components/ui/States";
 import Icon from "@/components/ui/Icon";
 import StatusBadge from "@/components/StatusBadge";
 import { CONSULATE_OPTIONS } from "@/components/PeriodFilters";
+import AddApplicantModal from "@/components/admin/AddApplicantModal";
 import { useApplicants } from "@/hooks/useApplicants";
 import { useDebounced } from "@/hooks/useDebounced";
 import { apiFetch, jsonInit } from "@/lib/api";
@@ -26,14 +27,16 @@ const APPROVAL_OPTIONS = [{ value: "", label: "All reviews" }, ...Object.entries
 
 function ApplicantsInner() {
   const sp = useSearchParams();
+  const router = useRouter();
   const [approval, setApproval] = useState(sp.get("approval") || "");
   const [consulate, setConsulate] = useState("");
   const [university, setUniversity] = useState("");
   const [visaStatus, setVisaStatus] = useState("");
   const [period, setPeriod] = useState<Period>({ from: "", to: "" });
-  const [search, setSearch] = useState(sp.get("q") || "");
+  const search = sp.get("q") || "";
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortState>({ key: "createdAt", dir: "desc" });
+  const [adding, setAdding] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
@@ -95,6 +98,7 @@ function ApplicantsInner() {
         description="Review submissions and manage records."
         actions={
           <>
+            <button type="button" className="btn-primary w-full sm:w-auto" onClick={() => setAdding(true)}><Icon name="plus" size={14} /> Add applicant</button>
             <DateRangePicker value={period} onChange={setPeriod} label="Waiting list" />
             <Select variant="pill" label="Review state" prefix="Review" value={approval} onChange={setApproval} options={APPROVAL_OPTIONS} className="w-full sm:w-auto" />
             <Select variant="pill" label="Embassy" prefix="Embassy" value={consulate} onChange={setConsulate} options={CONSULATE_OPTIONS} className="w-full sm:w-auto" />
@@ -106,10 +110,7 @@ function ApplicantsInner() {
 
       <section className="card overflow-hidden" aria-label="Applicants">
         <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-          <div className="relative w-full sm:w-64">
-            <Icon name="search" size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-mute" />
-            <input className="input !min-h-[30px] !py-1 pl-8 !text-xs" type="search" aria-label="Filter the table" placeholder="Filter this table…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
+          {search && <FilterChip label={`Search: ${search}`} active onRemove={() => router.replace("/admin/applicants", { scroll: false })} />}
           <div className="flex flex-wrap items-center gap-1.5">
             {approval && <FilterChip label={APPROVAL_LABELS[approval]} active onRemove={() => setApproval("")} />}
             {consulate && <FilterChip label={consulate} active onRemove={() => setConsulate("")} />}
@@ -145,6 +146,7 @@ function ApplicantsInner() {
           )}
         />
       </section>
+      <AddApplicantModal open={adding} onClose={() => setAdding(false)} onCreated={() => reload()} />
     </>
   );
 }

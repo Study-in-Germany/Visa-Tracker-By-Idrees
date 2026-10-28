@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
+import Icon from "@/components/ui/Icon";
 import Pagination from "@/components/ui/Pagination";
-import SearchInput from "@/components/ui/SearchInput";
 import { Chip } from "@/components/ui/Chip";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import ListingCard, { ListingGrid, ListingGridSkeleton } from "@/components/accommodation/ListingCard";
@@ -18,12 +19,12 @@ import { LISTING_STATUS_LABELS, REPORT_REASON_LABELS, type ListingCardDto, type 
 type ReportRow = { id: string; reason: string; details: string | null; status: string; createdAt: string; listing: { id: string; title: string; city: string; status: string } };
 
 const TABS = [
-  { value: "PENDING_REVIEW", label: "Pending" },
-  { value: "APPROVED", label: "Live" },
+  { value: "PENDING_REVIEW", label: "Waiting for review" },
+  { value: "APPROVED", label: "Live on the site" },
   { value: "RENTED", label: "Rented" },
-  { value: "REJECTED", label: "Rejected" },
-  { value: "", label: "All" },
-  { value: "reports", label: "Reports" },
+  { value: "REJECTED", label: "Removed" },
+  { value: "", label: "Everything" },
+  { value: "reports", label: "Reports from users" },
 ];
 
 function Tabs({ value, onChange, reportCount }: { value: string; onChange: (v: string) => void; reportCount: number }) {
@@ -47,8 +48,10 @@ function Tabs({ value, onChange, reportCount }: { value: string; onChange: (v: s
 }
 
 function ListingsTab({ status }: { status: string }) {
-  const [q, setQ] = useState("");
+  const q = useSearchParams().get("q") ?? "";
   const [page, setPage] = useState(1);
+  const [lastQ, setLastQ] = useState(q);
+  if (lastQ !== q) { setLastQ(q); setPage(1); }
   const params = new URLSearchParams({ scope: "admin", page: String(page), pageSize: "12" });
   if (status) params.set("status", status);
   if (q) params.set("q", q);
@@ -57,7 +60,6 @@ function ListingsTab({ status }: { status: string }) {
 
   return (
     <>
-      <div className="mb-4 max-w-md"><SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search listings" label="Search listings" /></div>
       {error && items.length === 0 ? (
         <div className="card"><ErrorState error={error} onRetry={reload} /></div>
       ) : loading && items.length === 0 ? (
@@ -132,15 +134,25 @@ function ReportsTab() {
   );
 }
 
-export default function AdminAccommodationPage() {
-  const [tab, setTab] = useState("PENDING_REVIEW");
+function AccommodationInner() {
+  const sp = useSearchParams();
+  const initial = sp.get("tab");
+  const [tab, setTab] = useState(initial !== null && TABS.some((t) => t.value === initial) ? initial : "PENDING_REVIEW");
   const reports = useApi<{ count: number }>("/api/admin/reports?status=OPEN&pageSize=1");
 
   return (
     <>
-      <PageHeader title="Accommodation" />
+      <PageHeader
+        title="Accommodation"
+        description="Rooms and flats posted for students. Add your own, approve new posts, or remove anything that looks wrong."
+        actions={<Link href="/admin/accommodation/new" className="btn-gold w-full sm:w-auto"><Icon name="plus" size={14} /> Add accommodation</Link>}
+      />
       <Tabs value={tab} onChange={setTab} reportCount={reports.data?.count ?? 0} />
       {tab === "reports" ? <ReportsTab /> : <ListingsTab key={tab} status={tab} />}
     </>
   );
+}
+
+export default function AdminAccommodationPage() {
+  return <Suspense><AccommodationInner /></Suspense>;
 }

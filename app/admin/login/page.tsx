@@ -6,12 +6,8 @@ import Link from "next/link";
 import AuthLayout from "@/components/AuthLayout";
 import PasswordInput from "@/components/PasswordInput";
 import Field from "@/components/ui/Field";
-import Icon from "@/components/ui/Icon";
 import { Notice } from "@/components/ui/States";
 import { apiFetch, jsonInit } from "@/lib/api";
-
-// Local development only: the account created by `npm run seed`. Compiled out of production builds.
-const DEMO = process.env.NODE_ENV !== "production" ? { email: "admin@visatracker.local", password: "ChangeMe123!" } : null;
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -57,23 +53,6 @@ export default function AdminLoginPage() {
           {loading ? "Signing in…" : "Sign in"}
         </button>
       </form>
-
-      {DEMO && (
-        <div className="mt-4 rounded-lg border border-dashed border-line-strong bg-paper p-2.5">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-mute">
-            <Icon name="cog" size={12} /> Development only
-          </p>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <div className="min-w-0 text-xs text-ink-700">
-              <p>Seeded admin</p>
-              <p className="truncate font-mono text-mute">{DEMO.email}</p>
-            </div>
-            <button type="button" className="btn-secondary !min-h-[30px] shrink-0 !text-xs" onClick={() => { setEmail(DEMO.email); setPassword(DEMO.password); setError(""); }}>
-              Fill in
-            </button>
-          </div>
-        </div>
-      )}
     </AuthLayout>
   );
 }

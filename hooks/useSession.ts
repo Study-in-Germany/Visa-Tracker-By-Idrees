@@ -2,10 +2,10 @@
 
 import { useApi } from "./useApi";
 
-export type SessionInfo = { role: "admin" | "applicant" | "guest"; publicId?: string };
+export type SessionInfo = { role: "admin" | "applicant" | "guest"; publicId?: string; email?: string };
 
 /** Current viewer's role. `role` is undefined until the first response arrives. */
 export function useSession() {
   const { data, loading } = useApi<SessionInfo>("/api/session");
-  return { role: data?.role, publicId: data?.publicId, loading, signedIn: !!data && data.role !== "guest" };
+  return { role: data?.role, publicId: data?.publicId, email: data?.email, loading, signedIn: !!data && data.role !== "guest" };
 }

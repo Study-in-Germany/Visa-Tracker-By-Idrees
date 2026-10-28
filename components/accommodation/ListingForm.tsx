@@ -35,7 +35,7 @@ const KINDS = [
 ];
 
 /** Create or edit a listing. Pass `listing` to edit. Listings go live as soon as they are published. */
-export default function ListingForm({ listing }: { listing?: ListingDetailDto }) {
+export default function ListingForm({ listing, admin = false }: { listing?: ListingDetailDto; /** Posting as the admin team: returns to the admin list afterwards. */ admin?: boolean }) {
   const router = useRouter();
   const editing = !!listing;
   const [images, setImages] = useState<ListingImageDto[]>(listing?.images ?? []);
@@ -90,11 +90,11 @@ export default function ListingForm({ listing }: { listing?: ListingDetailDto })
       if (editing) {
         await apiFetch(`/api/listings/${listing!.id}`, jsonInit("PATCH", payload));
         invalidateApi("/api/listings");
-        router.push(`/accommodation/${listing!.id}`);
+        router.push(admin ? "/admin/accommodation?tab=APPROVED" : `/accommodation/${listing!.id}`);
       } else {
         const { id } = await apiFetch<{ id: string }>("/api/listings", jsonInit("POST", payload));
         invalidateApi("/api/listings");
-        router.push(`/accommodation/${id}`);
+        router.push(admin ? "/admin/accommodation?tab=APPROVED" : `/accommodation/${id}`);
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) { router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`); return; }
@@ -199,7 +199,7 @@ export default function ListingForm({ listing }: { listing?: ListingDetailDto })
       <aside className="space-y-3 lg:sticky lg:top-20">
         <div className="card space-y-3 p-4">
           <h2 className="text-[14px] font-semibold">{editing ? "Save your changes" : "Ready to publish?"}</h2>
-          <p className="text-xs text-mute">{editing ? "Changes show immediately." : "Your post goes live straight away. You can edit, hide or delete it any time from My listings."}</p>
+          <p className="text-xs text-mute">{editing ? "Changes show immediately." : admin ? "It goes live straight away under the Visa Tracker team. You can edit or remove it any time from this list." : "Your post goes live straight away. You can edit, hide or delete it any time from My listings."}</p>
           {formError && <Notice tone="error">{formError}</Notice>}
           <button type="submit" className="btn-gold !min-h-[44px] w-full" disabled={busy}>{busy ? "Publishing…" : editing ? "Save changes" : "Publish"}</button>
           <button type="button" className="btn-secondary w-full" onClick={() => router.back()} disabled={busy}>Cancel</button>

@@ -6,6 +6,7 @@ import { generateAccessCode } from "@/lib/ids";
 import { createApplicantWithTrackingId } from "@/lib/create-applicant";
 import bcrypt from "bcryptjs";
 import { waitingListWhere } from "@/lib/period";
+import { TEAM_PUBLIC_ID } from "@/lib/listings";
 import { VISA_STATUS_LABELS, CONSULATES } from "@/lib/constants";
 
 const DATE_FIELDS = ["waitingListDate", "submissionInviteDate", "documentSubmissionDate", "correctionRequestDate", "correctionSubmittedDate", "appointmentDate", "interviewDate", "decisionDate"] as const;
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
   if (consulate && !CONSULATES.includes(consulate)) return bad("consulate");
   if (approvalParam && !["PENDING_REVIEW", "APPROVED", "REJECTED"].includes(approvalParam)) return bad("approval");
 
-  const where: any = {};
+  const where: any = { publicId: { not: TEAM_PUBLIC_ID } };
 
   if (session) {
     if (approvalParam) where.approval = approvalParam;

@@ -13,7 +13,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const announcement = await prisma.announcement.update({
     where: { id: params.id },
-    data: parsed.data,
+    data: { ...parsed.data, ...(parsed.data.consulate !== undefined ? { consulate: parsed.data.consulate || null } : {}) },
   });
   return NextResponse.json({ announcement });
 }

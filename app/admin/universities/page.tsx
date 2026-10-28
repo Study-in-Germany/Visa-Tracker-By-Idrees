@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
-import SearchInput from "@/components/ui/SearchInput";
 import Pagination from "@/components/ui/Pagination";
 import Icon from "@/components/ui/Icon";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -19,9 +19,11 @@ const miniBtn = "grid h-8 w-8 place-items-center rounded-md border border-line-s
 
 type Target = { kind: "uni"; u: UniversityDto } | { kind: "programme"; p: ProgrammeDto };
 
-export default function AdminUniversitiesPage() {
-  const [q, setQ] = useState("");
+function UniversitiesInner() {
+  const q = useSearchParams().get("q") ?? "";
   const [page, setPage] = useState(1);
+  const [lastQ, setLastQ] = useState(q);
+  if (lastQ !== q) { setLastQ(q); setPage(1); }
   const params = new URLSearchParams({ includeUnpublished: "1", page: String(page), pageSize: "12" });
   if (q) params.set("q", q);
   const { data, error, loading, reload } = useApi<Paged<UniversityDto>>(`/api/universities?${params}`);
@@ -39,9 +41,6 @@ export default function AdminUniversitiesPage() {
         title="Universities"
         actions={<button type="button" className="btn-primary" onClick={() => setUniForm({ open: true, u: null })}><Icon name="plus" size={14} /> Add university</button>}
       />
-      <div className="mb-4 max-w-md">
-        <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search university, city or programme" label="Search universities" />
-      </div>
 
       {error && items.length === 0 ? (
         <div className="card"><ErrorState error={error} onRetry={reload} /></div>
@@ -92,4 +91,8 @@ export default function AdminUniversitiesPage() {
       />
     </>
   );
+}
+
+export default function AdminUniversitiesPage() {
+  return <Suspense><UniversitiesInner /></Suspense>;
 }

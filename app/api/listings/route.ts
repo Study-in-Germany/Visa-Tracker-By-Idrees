@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { apiError, forbidden, getActor, unauthorized } from "@/lib/permissions";
 import { listingSchema } from "@/lib/validations";
-import { listingCardSelect, toCard } from "@/lib/listings";
+import { getTeamOwnerId, listingCardSelect, toCard } from "@/lib/listings";
 import { pageMeta, parsePaging } from "@/lib/pagination";
 import { parseCalendarDay } from "@/lib/period";
 
@@ -102,7 +102,9 @@ export async function GET(req: NextRequest) {
 // POST /api/listings — publish a listing (applicants only). It is live straight away.
 export async function POST(req: NextRequest) {
   const actor = await getActor();
-  if (actor.role !== "applicant") return actor.role === "guest" ? unauthorized() : apiError("Listings are posted from an applicant account.", 403);
+  if (actor.role === "guest") return unauthorized();
+  // Admins post on behalf of the team; applicants post as themselves.
+  const ownerId = actor.role === "admin" ? await getTeamOwnerId() : actor.applicantId;
 
   const body = await req.json().catch(() => null);
   const parsed = listingSchema.safeParse(body);
@@ -111,16 +113,16 @@ export async function POST(req: NextRequest) {
   const { imageIds: submittedImages, ...data } = parsed.data;
   const imageIds = data.kind === "SEEKING" ? [] : submittedImages;
 
-  if ((await prisma.listing.count({ where: { ownerId: actor.applicantId } })) >= MAX_LISTINGS_PER_USER) {
+  if (actor.role !== "admin" && (await prisma.listing.count({ where: { ownerId } })) >= MAX_LISTINGS_PER_USER) {
     return apiError(`You can have up to ${MAX_LISTINGS_PER_USER} listings. Delete an old one to add another.`, 409);
   }
-  const images = await prisma.listingImage.findMany({ where: { id: { in: imageIds }, ownerId: actor.applicantId, listingId: null }, select: { id: true } });
+  const images = await prisma.listingImage.findMany({ where: { id: { in: imageIds }, ownerId, listingId: null }, select: { id: true } });
   if (images.length !== new Set(imageIds).size) return apiError("One of the photos is no longer available. Please upload it again.", 400);
 
   const listing = await prisma.$transaction(async (tx) => {
     const created = await tx.listing.create({
       data: {
-        ownerId: actor.applicantId,
+        ownerId,
         kind: data.kind ?? "OFFERING", anmeldung: data.anmeldung ?? false, minStayMonths: data.minStayMonths ?? null,
         sizeSqm: data.sizeSqm ?? null, genderPreference: data.genderPreference ?? "ANY",
         // Listings go live immediately; moderators can unpublish them, and repeated reports pull them back for review.

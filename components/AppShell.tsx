@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Icon, { IconName } from "@/components/ui/Icon";
-import { useApi } from "@/hooks/useApi";
+import { invalidateApi, useApi } from "@/hooks/useApi";
 import { SITE_NAME } from "@/lib/constants";
 import Logo from "@/components/Logo";
 import HeaderSearch from "@/components/HeaderSearch";
@@ -14,8 +14,10 @@ import InstallApp, { InstallBanner } from "@/components/InstallApp";
 import { PageTitleContext, type PageTitleState } from "@/components/PageTitle";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import BottomNav from "@/components/BottomNav";
+import AdminBottomNav from "@/components/admin/AdminBottomNav";
+import { useSession } from "@/hooks/useSession";
 
-type Item = { href: string; label: string; icon: IconName; exact?: boolean; badge?: "pending" | "moderation" };
+type Item = { href: string; label: string; icon: IconName; exact?: boolean; badge?: "pending" | "moderation"; external?: boolean };
 type Section = { title: string; items: Item[] };
 
 const PUBLIC_NAV: Section[] = [
@@ -42,26 +44,32 @@ const PUBLIC_NAV: Section[] = [
   },
 ];
 
+// Opened in a new tab from the admin area so the admin session and place are never lost.
 const PUBLIC_SITE: Section = {
   title: "Public site",
   items: [
-    { href: "/", label: "Overview", icon: "grid", exact: true },
-    { href: "/tracker", label: "Tracker", icon: "search" },
-    { href: "/analytics", label: "Analytics", icon: "chart" },
+    { href: "/", label: "Overview", icon: "grid", exact: true, external: true },
+    { href: "/tracker", label: "Tracker", icon: "search", external: true },
+    { href: "/analytics", label: "Analytics", icon: "chart", external: true },
   ],
 };
 
 const ADMIN_NAV: Section[] = [
+  { title: "Overview", items: [{ href: "/admin", label: "Dashboard", icon: "grid", exact: true }] },
+  { title: "People", items: [{ href: "/admin/applicants", label: "Applicants", icon: "users", badge: "pending" }] },
   {
-    title: "Manage",
+    title: "Directory",
     items: [
-      { href: "/admin", label: "Dashboard", icon: "grid", exact: true },
-      { href: "/admin/applicants", label: "Applicants", icon: "users", badge: "pending" },
       { href: "/admin/universities", label: "Universities", icon: "school" },
       { href: "/admin/accommodation", label: "Accommodation", icon: "home", badge: "moderation" },
-      { href: "/admin/imports", label: "Data imports", icon: "layers" },
-      { href: "/admin/import", label: "Import", icon: "upload" },
-      { href: "/admin/announcements", label: "Announcements", icon: "bell" },
+    ],
+  },
+  { title: "Content", items: [{ href: "/admin/announcements", label: "Announcements", icon: "bell" }] },
+  {
+    title: "System",
+    items: [
+      { href: "/admin/imports", label: "Update data", icon: "layers" },
+      { href: "/admin/import", label: "Import applicants", icon: "upload" },
       { href: "/admin/settings", label: "Settings", icon: "settings" },
     ],
   },
@@ -102,6 +110,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [pageTitle, setTitle] = useState<PageTitleState>(null);
   const wideHeader = useMediaQuery("(min-width: 640px)");
   const inDashboard = pathname.startsWith("/dashboard");
+  const session = useSession();
+  const isAdminViewer = session.role === "admin";
   const sections = inAdmin ? ADMIN_NAV : inDashboard ? APPLICANT_NAV : PUBLIC_NAV;
   const pending = useApi<{ count: number }>(inAdmin ? "/api/applicants?approval=PENDING_REVIEW&page=1&pageSize=1" : null);
   const pendingCount = pending.data?.count ?? 0;
@@ -134,8 +144,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     });
 
   async function logout() {
-    await fetch(inAdmin ? "/api/admin/logout" : "/api/applicant/logout", { method: "POST" });
-    router.push(inAdmin ? "/admin/login" : "/");
+    const asAdmin = inAdmin || isAdminViewer;
+    await fetch(asAdmin ? "/api/admin/logout" : "/api/applicant/logout", { method: "POST" });
+    invalidateApi("/api/session");
+    router.push(asAdmin ? "/admin/login" : "/");
     router.refresh();
   }
 
@@ -151,11 +163,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {!compact && <p className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-mute">{s.title}</p>}
           <ul className="space-y-0.5">
             {s.items.map((i) => {
-              const active = isActive(i);
+              const active = !i.external && isActive(i);
               return (
                 <li key={s.title + i.href}>
                   <Link
                     href={i.href}
+                    {...(i.external ? { target: "_blank", rel: "noopener" } : {})}
                     title={compact ? i.label : undefined}
                     aria-current={active ? "page" : undefined}
                     className={`${row(compact)} ${active ? "bg-paper-sunk text-ink-900" : "text-ink-700 hover:bg-paper"}`}
@@ -163,6 +176,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     {active && <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r bg-clay-500" aria-hidden="true" />}
                     <Icon name={i.icon} size={17} className={active ? "text-ink-900" : "text-mute"} />
                     <span className={compact ? "sr-only" : "flex-1 truncate"}>{i.label}</span>
+                    {!compact && i.external && <Icon name="external" size={12} className="text-mute" />}
                     {!compact && (i.badge === "pending" ? pendingCount : i.badge === "moderation" ? moderationCount : 0) > 0 && (
                       <span className="grid h-5 min-w-[20px] place-items-center rounded-md bg-clay-100 px-1 text-[11px] font-semibold text-clay-600">{i.badge === "pending" ? pendingCount : moderationCount}</span>
                     )}
@@ -182,22 +196,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="space-y-0.5 border-t border-line pt-3">
         {!inAdmin && <InstallApp />}
-        {inAdmin || inDashboard ? (
-          <button type="button" onClick={logout} title="Log out" className={cls}>
-            <Icon name="logout" size={17} className="text-mute" />
-            {txt("Log out")}
-          </button>
-        ) : (
+        {inAdmin || inDashboard || isAdminViewer ? (
           <>
-            <Link href="/login" title="Applicant login" className={cls}>
-              <Icon name="user" size={17} className="text-mute" />
-              {txt("Applicant login")}
-            </Link>
-            <Link href="/admin" title="Admin" className={cls}>
-              <Icon name="shield" size={17} className="text-mute" />
-              {txt("Admin")}
-            </Link>
+            {isAdminViewer && !inAdmin && (
+              <Link href="/admin" title="Admin dashboard" className={`${cls} bg-clay-50 !text-clay-600 hover:bg-clay-100`}>
+                <Icon name="shield" size={17} />
+                {txt("Admin dashboard")}
+              </Link>
+            )}
+            <button type="button" onClick={logout} title="Log out" className={cls}>
+              <Icon name="logout" size={17} className="text-mute" />
+              {txt("Log out")}
+            </button>
           </>
+        ) : (
+          <Link href="/login" title="Applicant login" className={cls}>
+            <Icon name="user" size={17} className="text-mute" />
+            {txt("Applicant login")}
+          </Link>
         )}
       </div>
     );
@@ -272,11 +288,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <main id="main" className={`w-full flex-1 px-3 pt-4 sm:px-5 lg:px-6 ${inAdmin ? "pb-6" : "pb-24 lg:pb-6"}`}>
+        {isAdminViewer && !inAdmin && !inDashboard && (
+          <div className="flex items-center justify-between gap-3 border-b border-clay-100 bg-clay-50 px-3 py-1.5 text-xs text-clay-600 sm:px-5 lg:px-6">
+            <span className="flex items-center gap-1.5 font-medium"><Icon name="shield" size={13} /> You&apos;re signed in as admin</span>
+            <Link href="/admin" className="font-semibold underline-offset-2 hover:underline">Back to dashboard</Link>
+          </div>
+        )}
+        <main id="main" className={`w-full flex-1 px-3 pt-4 sm:px-5 lg:px-6 pb-24 lg:pb-6`}>
           {children}
         </main>
         {!inAdmin && <InstallBanner />}
-        {!inAdmin && <BottomNav onMenu={() => setDrawer(true)} />}
+        {inAdmin ? <AdminBottomNav onMenu={() => setDrawer(true)} pending={pendingCount} moderation={moderationCount} /> : <BottomNav onMenu={() => setDrawer(true)} />}
       </div>
     </div>
     </PageTitleContext.Provider>

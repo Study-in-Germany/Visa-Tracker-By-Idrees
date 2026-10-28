@@ -3,10 +3,11 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { z } from "zod";
+import { passwordProblem } from "@/lib/password";
 
 const schema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(8),
+  newPassword: z.string().min(1).max(200),
 });
 
 export async function POST(req: NextRequest) {
@@ -17,13 +18,18 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
+  const problem = passwordProblem(parsed.data.newPassword, session.email as string);
+  if (problem) return NextResponse.json({ error: `New password ${problem}.` }, { status: 400 });
+
   const user = await prisma.adminUser.findUnique({ where: { email: session.email as string } });
   if (!user) return NextResponse.json({ error: "Admin not found" }, { status: 404 });
 
   const ok = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
   if (!ok) return NextResponse.json({ error: "Current password is incorrect" }, { status: 401 });
 
-  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
+  if (parsed.data.newPassword === parsed.data.currentPassword) return NextResponse.json({ error: "Choose a password you haven't used here before." }, { status: 400 });
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
   await prisma.adminUser.update({ where: { id: user.id }, data: { passwordHash } });
 
   return NextResponse.json({ ok: true });

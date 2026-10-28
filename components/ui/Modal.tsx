@@ -17,7 +17,7 @@ export default function Modal({
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   variant?: "dialog" | "drawer";
 }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -51,7 +51,7 @@ export default function Modal({
 
   if (!open || typeof document === "undefined") return null;
   const drawer = variant === "drawer";
-  const width = { sm: "sm:max-w-sm", md: "sm:max-w-lg", lg: "sm:max-w-2xl" }[size];
+  const width = { sm: "sm:max-w-sm", md: "sm:max-w-lg", lg: "sm:max-w-2xl", xl: "sm:max-w-4xl" }[size];
 
   return createPortal(
     <div className={`fixed inset-0 z-[90] flex items-end justify-center ${drawer ? "sm:justify-end" : "sm:items-center sm:p-4"}`}>
