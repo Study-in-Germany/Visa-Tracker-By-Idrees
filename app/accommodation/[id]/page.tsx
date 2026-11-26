@@ -155,7 +155,7 @@ export default function ListingPage({ params }: { params: { id: string } }) {
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-line bg-paper-raised px-5 py-4 text-[15px] font-medium shadow-[0_6px_24px_-10px_rgba(35,47,39,0.2)]">
-            <Icon name="check" size={18} className="text-clay-500" /> No booking fees. Contact the poster directly.
+            <Icon name="check" size={18} className="text-blue-500" /> No booking fees. Contact the poster directly.
           </div>
           <div className="rounded-2xl border border-line bg-paper-raised p-6 shadow-[0_6px_24px_-8px_rgba(35,47,39,0.18)]">
             <p className="text-[26px] font-semibold tracking-tight">

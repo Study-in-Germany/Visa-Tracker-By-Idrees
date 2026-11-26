@@ -21,6 +21,11 @@ export type Analytics = {
     avgWaitingToSubmission: number | null;
     avgSubmissionToAppointment: number | null;
     avgAppointmentToDecision: number | null;
+    sampleSizes?: {
+      waitingToSubmission: number;
+      submissionToAppointment: number;
+      appointmentToDecision: number;
+    };
   };
   monthlyVolume: { month: string; count: number }[];
   monthlyOutcomes: { month: string; issued: number; rejected: number }[];
@@ -38,11 +43,15 @@ export type ApplicantRow = {
   submissionInviteDate?: string | null;
   documentSubmissionDate: string | null;
   correctionRequestDate: string | null;
+  correctionSubmittedDate?: string | null;
   appointmentDate: string | null;
+  interviewDate?: string | null;
   decisionDate?: string | null;
   visaStatus: string;
   approval?: string;
   isAnonymous?: boolean;
+  queuePosition?: number | null;
+  updatedAt?: string;
   createdAt?: string;
 };
 

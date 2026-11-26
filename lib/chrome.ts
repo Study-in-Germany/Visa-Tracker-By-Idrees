@@ -21,6 +21,7 @@ export function chromeFor(pathname: string): Chrome {
   if (pathname === "/universities") return { search: { kind: "query", placeholder: "Search universities, cities or programmes", label: "Search universities" }, action: SUBMIT };
   if (pathname === "/programmes") return { search: { kind: "query", placeholder: "Search programmes, universities or subjects", label: "Search programmes" }, action: SUBMIT };
   if (pathname === "/accommodation") return { search: { kind: "query", placeholder: "Search city, area or keyword", label: "Search accommodation" }, action: POST };
+  if (pathname === "/dashboard") return { search: { kind: "tracker" }, action: { href: "/dashboard/information", label: "Edit profile", icon: "edit" } };
   if (pathname === "/dashboard/listings") return { search: { kind: "tracker" }, action: POST };
   return { search: { kind: "tracker" }, action: SUBMIT };
 }

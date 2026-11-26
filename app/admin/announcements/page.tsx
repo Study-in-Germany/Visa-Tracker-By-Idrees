@@ -30,9 +30,9 @@ function Preview({ f }: { f: Form }) {
   return (
     <div className="rounded-xl border border-line bg-paper p-3.5">
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-mute">Preview</p>
-      <article className={`card p-4 ${f.pinned ? "border-l-4 border-l-clay-500" : ""}`}>
+      <article className={`card p-4 ${f.pinned ? "border-l-4 border-l-blue-500" : ""}`}>
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-          {f.pinned && <span className="inline-flex items-center gap-1 rounded-md bg-clay-100 px-1.5 py-0.5 text-clay-600"><Icon name="pin" size={11} /> Pinned</span>}
+          {f.pinned && <span className="inline-flex items-center gap-1 rounded-md bg-blue-100 px-1.5 py-0.5 text-blue-600"><Icon name="pin" size={11} /> Pinned</span>}
           <span className="rounded-md bg-paper-sunk px-1.5 py-0.5 text-ink-700">{f.consulate || "All embassies"}</span>
           <span className="font-normal text-mute">Today</span>
         </div>
@@ -88,7 +88,7 @@ function Composer({ open, editing, onClose, onSaved }: { open: boolean; editing:
       footer={
         <>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>Cancel</button>
-          <button type="submit" form="announcement-form" className="btn-gold" disabled={busy}>{busy ? "Saving…" : editing ? "Save changes" : "Publish"}</button>
+          <button type="submit" form="announcement-form" className="btn-primary" disabled={busy}>{busy ? "Saving…" : editing ? "Save changes" : "Publish"}</button>
         </>
       }
     >
@@ -155,7 +155,7 @@ function AnnouncementsInner() {
       <PageHeader
         title="Announcements"
         description="Updates shown on the public Announcements page."
-        actions={<button type="button" className="btn-gold" onClick={() => setComposer({ open: true, editing: null })}><Icon name="plus" size={14} /> New announcement</button>}
+        actions={<button type="button" className="btn-primary" onClick={() => setComposer({ open: true, editing: null })}><Icon name="plus" size={14} /> New announcement</button>}
       />
 
       <section className="mb-4 grid grid-cols-3 gap-3" aria-label="Summary">
@@ -183,16 +183,16 @@ function AnnouncementsInner() {
           <EmptyState
             title={all.length === 0 ? "No announcements yet" : "Nothing matches"}
             hint={all.length === 0 ? "Share embassy news and tips with everyone using the tracker." : "Try a different filter or search."}
-            action={all.length === 0 ? <button type="button" className="btn-gold" onClick={() => setComposer({ open: true, editing: null })}>Write the first one</button> : undefined}
+            action={all.length === 0 ? <button type="button" className="btn-primary" onClick={() => setComposer({ open: true, editing: null })}>Write the first one</button> : undefined}
           />
         </div>
       ) : (
         <ul className="grid items-start gap-3 xl:grid-cols-2">
           {shown.map((a) => (
             <li key={a.id}>
-              <article className={`card group flex h-full flex-col p-4 ${a.pinned ? "border-l-4 border-l-clay-500" : ""}`}>
+              <article className={`card group flex h-full flex-col p-4 ${a.pinned ? "border-l-4 border-l-blue-500" : ""}`}>
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-                  {a.pinned && <span className="inline-flex items-center gap-1 rounded-md bg-clay-100 px-1.5 py-0.5 text-clay-600"><Icon name="pin" size={11} /> Pinned</span>}
+                  {a.pinned && <span className="inline-flex items-center gap-1 rounded-md bg-blue-100 px-1.5 py-0.5 text-blue-600"><Icon name="pin" size={11} /> Pinned</span>}
                   <span className="rounded-md bg-paper-sunk px-1.5 py-0.5 text-ink-700">{a.consulate || "All embassies"}</span>
                   <span className="ml-auto font-normal text-mute" title={fmtDate(a.createdAt)}>{timeAgo(a.createdAt)}</span>
                 </div>

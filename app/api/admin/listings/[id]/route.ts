@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { apiError, forbidden, getActor, unauthorized } from "@/lib/permissions";
 import { listingModerationSchema } from "@/lib/validations";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 // PATCH /api/admin/listings/:id — approve, reject (with a reason for the owner) or send back to review. Admin only.
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -24,5 +25,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       rentedAt: null,
     },
   });
+  invalidateTags(CACHE_TAGS.LISTINGS);
   return NextResponse.json({ ok: true });
 }

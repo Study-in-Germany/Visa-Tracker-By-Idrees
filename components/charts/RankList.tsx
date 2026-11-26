@@ -7,13 +7,13 @@ export default function RankList({ rows }: { rows: { label: string; value: numbe
         <li key={r.label}>
           <div className="flex items-baseline justify-between gap-3 text-sm">
             <span className="min-w-0 break-words">
-              <span className="mr-2 text-xs tabular-nums text-ink-300">{i + 1}</span>
+              <span className="mr-2 text-xs tabular-nums text-mute">{i + 1}</span>
               {r.label}
             </span>
             <span className="tabular-nums text-ink-600">{r.value.toLocaleString("en-US")}</span>
           </div>
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-paper-sunk">
-            <div className="h-full rounded-full bg-clay-500" style={{ width: `${(r.value / max) * 100}%` }} />
+            <div className="h-full rounded-full bg-ink-800 dark:bg-zinc-300" style={{ width: `${(r.value / max) * 100}%` }} />
           </div>
         </li>
       ))}

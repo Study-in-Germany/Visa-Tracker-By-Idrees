@@ -23,12 +23,12 @@ export default function Greeting({ name, subtitle, actions }: { name: string; su
     return () => clearInterval(t);
   }, []);
   const p = part(now);
-  const pill = "inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-2.5 py-1 text-[12px] font-medium text-ink-700 shadow-[0_1px_2px_rgba(35,47,39,0.04)]";
+  const pill = "inline-flex items-center gap-1.5 rounded-md border border-line bg-paper-raised px-2.5 py-1 text-[12px] font-medium text-ink-700";
   return (
     <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-clay-500" aria-hidden="true">{GLYPH[p]}</svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-700" aria-hidden="true">{GLYPH[p]}</svg>
           <span className="min-w-0 truncate"><span className="font-normal text-ink-600">Good {p}, </span>{name}</span>
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-2">

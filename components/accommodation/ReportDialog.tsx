@@ -52,7 +52,7 @@ export default function ReportDialog({ listingId, open, onClose }: { listingId: 
             <div className="space-y-1">
               {REPORT_REASON_OPTIONS.map((o) => (
                 <label key={o.value} className={`flex min-h-[40px] cursor-pointer items-center gap-2.5 rounded-lg border px-3 text-[13px] ${reason === o.value ? "border-ink-800 bg-paper-sunk" : "border-line"}`}>
-                  <input type="radio" name="reason" value={o.value} checked={reason === o.value} onChange={() => setReason(o.value)} className="accent-[rgb(var(--clay-500))]" />
+                  <input type="radio" name="reason" value={o.value} checked={reason === o.value} onChange={() => setReason(o.value)} className="accent-[rgb(var(--accent-500))]" />
                   {o.label}
                 </label>
               ))}

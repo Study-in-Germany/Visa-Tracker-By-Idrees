@@ -73,7 +73,7 @@ export default function DatePicker({
           <button type="button" className="rounded-md px-2 py-1.5 text-xs font-medium text-ink-700 hover:bg-paper-sunk" onClick={() => { onChange(ymd(new Date())); setOpen(false); }}>
             Today
           </button>
-          <button type="button" disabled={!value} className="rounded-md px-2 py-1.5 text-xs font-medium text-clay-600 hover:bg-clay-50 disabled:text-ink-300 disabled:hover:bg-transparent" onClick={() => { onChange(""); setOpen(false); }}>
+          <button type="button" disabled={!value} className="rounded-md px-2 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:text-ink-300 disabled:hover:bg-transparent" onClick={() => { onChange(""); setOpen(false); }}>
             Clear date
           </button>
         </div>

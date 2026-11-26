@@ -4,12 +4,12 @@ import Link from "next/link";
 import Icon, { IconName } from "@/components/ui/Icon";
 
 export const TONES = {
-  clay: { tile: "bg-clay-100 text-clay-600", ring: "border-clay-100 bg-clay-50", text: "text-clay-600" },
-  sage: { tile: "bg-ink-100 text-ink-700", ring: "border-line bg-paper-raised", text: "text-ink-700" },
-  amber: { tile: "bg-amber-100 text-amber-700", ring: "border-amber-300/50 bg-amber-50", text: "text-amber-800" },
-  red: { tile: "bg-red-100 text-red-700", ring: "border-red-300/50 bg-red-50", text: "text-red-800" },
-  green: { tile: "bg-green-100 text-green-700", ring: "border-green-300/50 bg-green-50", text: "text-green-800" },
-  blue: { tile: "bg-blue-100 text-blue-700", ring: "border-blue-300/50 bg-blue-50", text: "text-blue-800" },
+  clay: { tile: "bg-blue-50 text-blue-700", ring: "border-line bg-paper-raised", text: "text-blue-600" },
+  sage: { tile: "bg-paper-sunk text-ink-800", ring: "border-line bg-paper-raised", text: "text-ink-800" },
+  amber: { tile: "bg-amber-50 text-amber-700", ring: "border-amber-200 bg-amber-50/50", text: "text-amber-800" },
+  red: { tile: "bg-red-50 text-red-700", ring: "border-red-200 bg-red-50/50", text: "text-red-800" },
+  green: { tile: "bg-emerald-50 text-emerald-700", ring: "border-emerald-200 bg-emerald-50/50", text: "text-emerald-800" },
+  blue: { tile: "bg-blue-50 text-blue-700", ring: "border-blue-200 bg-blue-50/50", text: "text-blue-800" },
 } as const;
 export type Tone = keyof typeof TONES;
 
@@ -29,7 +29,7 @@ export function Section({ title, hint, action, children, className = "", flush =
     <section className={`card overflow-hidden ${className}`}>
       <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
         <div className="min-w-0">
-          <h2 className="text-[14px] font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-[14px] font-semibold tracking-tight text-ink-900">{title}</h2>
           {hint && <p className="mt-0.5 truncate text-xs text-mute">{hint}</p>}
         </div>
         {action}
@@ -43,26 +43,26 @@ export function Section({ title, hint, action, children, className = "", flush =
 export function AttentionTile({ icon, tone, count, label, hint, href, loading }: { icon: IconName; tone: Tone; count: number | undefined; label: string; hint: string; href: string; loading?: boolean }) {
   const t = TONES[count ? tone : "sage"];
   return (
-    <Link href={href} className={`group flex items-center gap-3.5 rounded-xl border p-3.5 transition-shadow hover:shadow-md ${t.ring}`}>
-      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${t.tile}`}><Icon name={icon} size={20} /></span>
+    <Link href={href} className={`group flex items-center gap-3.5 rounded-lg border p-3.5 transition-colors hover:border-line-strong ${t.ring}`}>
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${t.tile}`}><Icon name={icon} size={18} /></span>
       <div className="min-w-0 flex-1">
         <p className="flex items-baseline gap-2">
-          <span className="text-[26px] font-bold leading-none tabular-nums tracking-tight">{loading ? "–" : (count ?? 0).toLocaleString("en-US")}</span>
-          <span className="truncate text-[13px] font-semibold">{label}</span>
+          <span className="text-[24px] font-semibold leading-none tabular-nums tracking-tight">{loading ? "–" : (count ?? 0).toLocaleString("en-US")}</span>
+          <span className="truncate text-[13px] font-semibold text-ink-900">{label}</span>
         </p>
         <p className="mt-1 truncate text-xs text-mute">{count ? hint : "Nothing waiting"}</p>
       </div>
-      <Icon name="chevronRight" size={16} className="shrink-0 text-mute transition-transform group-hover:translate-x-0.5" />
+      <Icon name="chevronRight" size={16} className="shrink-0 text-mute" />
     </Link>
   );
 }
 
 export function Kpi({ icon, label, value, sub, tone = "sage", href }: { icon: IconName; label: string; value: number | undefined; sub?: string; tone?: Tone; href?: string }) {
   const body = (
-    <div className="card flex h-full items-center gap-3 p-3.5 transition-shadow hover:shadow-md">
+    <div className="card flex h-full items-center gap-3 p-3.5 transition-colors hover:bg-paper-raised">
       <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${TONES[tone].tile}`}><Icon name={icon} size={17} /></span>
       <div className="min-w-0">
-        <p className="text-[22px] font-bold leading-none tabular-nums tracking-tight">{value === undefined ? "–" : value.toLocaleString("en-US")}</p>
+        <p className="text-[22px] font-semibold leading-none tabular-nums tracking-tight text-ink-900">{value === undefined ? "–" : value.toLocaleString("en-US")}</p>
         <p className="mt-1 truncate text-[11px] font-medium uppercase tracking-wider text-mute">{label}</p>
         {sub && <p className="truncate text-[11px] text-mute">{sub}</p>}
       </div>
@@ -91,7 +91,7 @@ export function DailyBars({ data, height = 140 }: { data: { date: string; count:
           return (
             <g key={d.date}>
               <title>{`${fmt(d.date)}: ${d.count}`}</title>
-              <rect x={i * step + 2} y={height - h} width={bw} height={h} rx="2" fill={d.count ? "rgb(var(--clay-500))" : "rgb(var(--line-strong))"} opacity={d.count ? 1 : 0.6} />
+              <rect x={i * step + 2} y={height - h} width={bw} height={h} rx="2" fill={d.count ? "rgb(var(--accent-600))" : "rgb(var(--line-strong))"} opacity={d.count ? 1 : 0.6} />
             </g>
           );
         })}
@@ -105,8 +105,8 @@ export function DailyBars({ data, height = 140 }: { data: { date: string; count:
 
 export function QuickLink({ href, icon, title, desc }: { href: string; icon: IconName; title: string; desc: string }) {
   return (
-    <Link href={href} className="group flex items-start gap-3 rounded-xl border border-line bg-card p-3.5 transition-colors hover:border-line-strong hover:bg-paper-raised">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-paper-sunk text-ink-700 transition-colors group-hover:bg-clay-100 group-hover:text-clay-600"><Icon name={icon} size={17} /></span>
+    <Link href={href} className="group flex items-start gap-3 rounded-lg border border-line bg-card p-3.5 transition-colors hover:border-line-strong hover:bg-paper-raised">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-paper-sunk text-ink-700"><Icon name={icon} size={17} /></span>
       <span className="min-w-0">
         <span className="block text-[13px] font-semibold">{title}</span>
         <span className="block text-xs leading-snug text-mute">{desc}</span>

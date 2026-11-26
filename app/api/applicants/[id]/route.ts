@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { updateApplicantSchema } from "@/lib/validations";
 import { sendStatusUpdateEmail } from "@/lib/email";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
@@ -95,6 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
   }
 
+  invalidateTags(CACHE_TAGS.APPLICANTS);
   return NextResponse.json({ applicant: updated });
 }
 
@@ -103,5 +105,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await prisma.applicant.delete({ where: { id: params.id } });
+  invalidateTags(CACHE_TAGS.APPLICANTS);
   return NextResponse.json({ ok: true });
 }

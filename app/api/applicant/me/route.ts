@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getApplicantSession } from "@/lib/auth";
 import { updateApplicantSchema } from "@/lib/validations";
+import { deriveVisaStatus } from "@/lib/status";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 export async function GET() {
   const session = await getApplicantSession();
@@ -14,7 +16,10 @@ export async function GET() {
   if (!applicant) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const { accessCodeHash, ...safe } = applicant;
-  return NextResponse.json({ applicant: safe });
+  return NextResponse.json(
+    { applicant: safe },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }
 
 // Applicants can update their own contact/profile info and known dates,
@@ -33,6 +38,34 @@ export async function PATCH(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const data = parsed.data;
   const dateField = (v?: string | null) => (v === undefined ? undefined : v ? new Date(v) : null);
+
+  const existing = await prisma.applicant.findUnique({
+    where: { id: session.applicantId },
+    select: {
+      visaStatus: true,
+      waitingListDate: true,
+      submissionInviteDate: true,
+      documentSubmissionDate: true,
+      correctionRequestDate: true,
+      correctionSubmittedDate: true,
+      appointmentDate: true,
+      interviewDate: true,
+      decisionDate: true,
+    },
+  });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const nextDates = {
+    waitingListDate: data.waitingListDate !== undefined ? dateField(data.waitingListDate)! : existing.waitingListDate,
+    submissionInviteDate: data.submissionInviteDate !== undefined ? dateField(data.submissionInviteDate)! : existing.submissionInviteDate,
+    documentSubmissionDate: data.documentSubmissionDate !== undefined ? dateField(data.documentSubmissionDate)! : existing.documentSubmissionDate,
+    correctionRequestDate: data.correctionRequestDate !== undefined ? dateField(data.correctionRequestDate)! : existing.correctionRequestDate,
+    correctionSubmittedDate: data.correctionSubmittedDate !== undefined ? dateField(data.correctionSubmittedDate)! : existing.correctionSubmittedDate,
+    appointmentDate: data.appointmentDate !== undefined ? dateField(data.appointmentDate)! : existing.appointmentDate,
+    interviewDate: data.interviewDate !== undefined ? dateField(data.interviewDate)! : existing.interviewDate,
+    decisionDate: data.decisionDate !== undefined ? dateField(data.decisionDate)! : existing.decisionDate,
+  };
+  const nextStatus = deriveVisaStatus(nextDates, existing.visaStatus);
 
   const updated = await prisma.applicant.update({
     where: { id: session.applicantId },
@@ -57,9 +90,11 @@ export async function PATCH(req: NextRequest) {
       appointmentDate: dateField(data.appointmentDate),
       interviewDate: dateField(data.interviewDate),
       decisionDate: dateField(data.decisionDate),
+      visaStatus: nextStatus,
     },
   });
 
   const { accessCodeHash, ...safe } = updated;
+  invalidateTags(CACHE_TAGS.APPLICANTS);
   return NextResponse.json({ applicant: safe });
 }

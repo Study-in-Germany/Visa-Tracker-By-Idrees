@@ -99,7 +99,7 @@ export default function GlobalSearch() {
         placeholder="Search ID, university, embassy…"
         aria-label="Search applicants"
         autoComplete="off"
-        className="h-10 w-full rounded-xl border border-line-strong bg-paper-raised pl-9 pr-8 text-[13px] placeholder:text-mute focus:border-ink-600 focus:ring-1 focus:ring-ink-600 [&::-webkit-search-cancel-button]:hidden"
+        className="h-9 w-full rounded-md border border-line-strong bg-paper-raised pl-9 pr-8 text-[13px] placeholder:text-mute focus:border-blue-600 focus:bg-card focus:ring-1 focus:ring-blue-600 [&::-webkit-search-cancel-button]:hidden"
       />
       <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-line px-1.5 text-[10px] text-mute sm:block">/</kbd>
 

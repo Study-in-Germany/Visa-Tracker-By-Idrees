@@ -29,10 +29,10 @@ export default function ColumnFilter({ filter }: { filter: ColumnFilterConfig })
         aria-label={`Filter ${filter.label}${active ? " (active)" : ""}`}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`relative grid h-6 w-6 place-items-center rounded-md normal-case transition-colors ${active ? "bg-clay-50 text-clay-600" : "text-mute hover:bg-paper-sunk hover:text-ink-900"}`}
+        className={`relative grid h-6 w-6 place-items-center rounded-md normal-case transition-colors ${active ? "bg-blue-50 text-blue-600" : "text-mute hover:bg-paper-sunk hover:text-ink-900"}`}
       >
         <Icon name="filter" size={13} />
-        {active && <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-clay-500" />}
+        {active && <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />}
       </button>
 
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={ref as React.RefObject<HTMLElement>} title={`Filter: ${filter.label}`} width={filter.type === "range" ? 280 : 220}>
@@ -44,7 +44,7 @@ export default function ColumnFilter({ filter }: { filter: ColumnFilterConfig })
                 <li key={o.value || "__all"} role="option" aria-selected={sel}>
                   <button type="button" onClick={() => { filter.onChange(o.value); setOpen(false); }} className={`flex min-h-[34px] w-full items-center justify-between gap-2 rounded-md px-2.5 text-left text-[13px] hover:bg-paper-sunk ${sel ? "font-semibold" : ""}`}>
                     <span className="truncate">{o.label}</span>
-                    {sel && <Icon name="check" size={14} className="text-clay-500" />}
+                    {sel && <Icon name="check" size={14} className="text-blue-500" />}
                   </button>
                 </li>
               );

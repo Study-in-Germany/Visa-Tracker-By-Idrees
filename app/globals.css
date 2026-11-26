@@ -3,25 +3,81 @@
 @tailwind utilities;
 
 @layer base {
-  /* Colour tokens as RGB triplets (consumed by tailwind.config.ts). Light is the default theme. */
+  /* Neutral, high-clarity design tokens as RGB triplets (consumed by tailwind.config.ts). */
   :root {
-    --paper: 239 238 233; --paper-raised: 251 250 247; --paper-sunk: 231 229 222; --card: 255 255 255;
-    --line: 227 224 216; --line-strong: 208 204 192; --mute: 123 120 111;
-    --ink-50: 238 242 238; --ink-100: 221 230 223; --ink-300: 138 161 144; --ink-600: 74 99 80;
-    --ink-700: 58 81 64; --ink-800: 46 66 53; --ink-900: 35 47 39;
-    --clay-50: 251 238 232; --clay-100: 244 216 203; --clay-400: 205 106 69; --clay-500: 181 83 47; --clay-600: 154 68 37;
-    --ochre-50: 251 243 223; --ochre-500: 185 138 31; --ochre-700: 138 100 20;
-    --scroll: 208 204 192; --scroll-hover: 170 165 149;
+    --paper: 255 255 255;
+    --paper-raised: 248 249 250;
+    --paper-sunk: 243 244 246;
+    --card: 255 255 255;
+    --line: 229 231 235;
+    --line-strong: 209 213 219;
+    --mute: 107 114 128;
+
+    --ink-50: 249 250 251;
+    --ink-100: 243 244 246;
+    --ink-300: 156 163 175;
+    --ink-600: 75 85 99;
+    --ink-700: 55 65 81;
+    --ink-800: 24 24 27;
+    --ink-900: 17 24 39;
+
+    --accent-50: 239 246 255;
+    --accent-100: 219 234 254;
+    --accent-500: 59 130 246;
+    --accent-600: 37 99 235;
+    --accent-700: 29 78 216;
+
+    /* Legacy token aliases mapped to neutral/blue scale so no warm/orange colors remain */
+    --clay-50: 239 246 255;
+    --clay-100: 219 234 254;
+    --clay-400: 59 130 246;
+    --clay-500: 37 99 235;
+    --clay-600: 29 78 216;
+
+    --ochre-50: 255 251 235;
+    --ochre-500: 217 119 6;
+    --ochre-700: 180 83 9;
+
+    --scroll: 209 213 219;
+    --scroll-hover: 156 163 175;
     color-scheme: light;
   }
+
   .dark {
-    --paper: 17 20 18; --paper-raised: 25 29 26; --paper-sunk: 34 39 35; --card: 25 29 26;
-    --line: 43 49 45; --line-strong: 59 67 62; --mute: 155 160 150;
-    --ink-50: 29 38 32; --ink-100: 39 51 43; --ink-300: 108 132 114; --ink-600: 155 181 161;
-    --ink-700: 188 207 192; --ink-800: 220 232 223; --ink-900: 239 244 240;
-    --clay-50: 44 28 21; --clay-100: 68 42 30; --clay-400: 224 145 111; --clay-500: 212 120 79; --clay-600: 234 162 133;
-    --ochre-50: 42 35 18; --ochre-500: 214 166 58; --ochre-700: 232 196 108;
-    --scroll: 59 67 62; --scroll-hover: 90 100 93;
+    --paper: 9 9 11;
+    --paper-raised: 17 17 19;
+    --paper-sunk: 24 24 27;
+    --card: 17 17 19;
+    --line: 39 39 42;
+    --line-strong: 63 63 70;
+    --mute: 161 161 170;
+
+    --ink-50: 24 24 27;
+    --ink-100: 39 39 42;
+    --ink-300: 113 113 122;
+    --ink-600: 161 161 170;
+    --ink-700: 212 212 216;
+    --ink-800: 244 244 245;
+    --ink-900: 250 250 250;
+
+    --accent-50: 23 37 84;
+    --accent-100: 30 58 138;
+    --accent-500: 96 165 250;
+    --accent-600: 96 165 250;
+    --accent-700: 147 197 253;
+
+    --clay-50: 23 37 84;
+    --clay-100: 30 58 138;
+    --clay-400: 96 165 250;
+    --clay-500: 96 165 250;
+    --clay-600: 147 197 253;
+
+    --ochre-50: 42 30 12;
+    --ochre-500: 245 158 11;
+    --ochre-700: 252 211 77;
+
+    --scroll: 63 63 70;
+    --scroll-hover: 113 113 122;
     color-scheme: dark;
   }
 
@@ -34,22 +90,20 @@
   *::-webkit-scrollbar-corner { background: transparent; }
   html { -webkit-text-size-adjust: 100%; font-size: 14px; }
   body { @apply bg-paper text-[13px] text-ink-900 antialiased; overscroll-behavior-y: none; }
-  :focus-visible { @apply outline-none ring-2 ring-clay-500 ring-offset-2 ring-offset-paper; }
+  :focus-visible { @apply outline-none ring-2 ring-blue-600 ring-offset-2 ring-offset-paper; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
 }
 
-/* Theme switch: the browser snapshots old and new page; we reveal the new one with a growing circle (see useTheme) */
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 ::view-transition-old(root) { z-index: 1; }
 ::view-transition-new(root) { z-index: 2; }
 
 @layer components {
-  /* Applied for ~400ms while switching theme so colours fade instead of snapping */
   .theme-transition, .theme-transition *, .theme-transition *::before, .theme-transition *::after {
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, fill 0.3s ease, stroke 0.3s ease, box-shadow 0.3s ease !important;
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, fill 0.25s ease, stroke 0.25s ease !important;
   }
 
-  /* Rich-text editor (Tiptap): fixed height, scrolls inside, same type scale as the rendered description */
+  /* Rich-text editor (Tiptap) */
   .rt-editor .ProseMirror { height: 260px; overflow-y: auto; padding: 0.75rem; font-size: 14px; line-height: 1.6; outline: none; }
   .rt-editor .ProseMirror > * + * { margin-top: 0.6rem; }
   .rt-editor .ProseMirror h1 { font-size: 18px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
@@ -60,63 +114,88 @@
   .rt-editor .ProseMirror li + li { margin-top: 0.2rem; }
   .rt-editor .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: rgb(var(--ink-300)); }
 
-  /* Touch screens: finger-sized controls, and 16px inputs so iOS doesn't zoom in on focus */
   @media (pointer: coarse) {
     .btn { min-height: 44px; }
     .input { min-height: 44px; font-size: 16px; }
     .rt-editor .ProseMirror { font-size: 16px; }
   }
-  .badge { @apply inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap; }
-  .card { @apply rounded-xl border border-line bg-card shadow-[0_1px_2px_rgba(35,47,39,0.05)]; }
-  .btn { @apply inline-flex min-h-[36px] items-center justify-center gap-2 rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primary { @apply btn bg-ink-800 text-paper-raised hover:bg-ink-900; }
-  .btn-gold { @apply btn bg-clay-500 text-white hover:brightness-95; }
-  .btn-secondary { @apply btn border border-line-strong bg-paper-raised text-ink-800 hover:bg-paper-sunk; }
-  .btn-danger { @apply btn border border-red-300 bg-red-50 text-red-800 hover:brightness-95; }
-  .input { @apply min-h-[36px] w-full rounded-lg border border-line-strong bg-paper-raised px-3 py-1.5 text-[13px] transition-colors placeholder:text-ink-300 hover:border-ink-300 focus:border-ink-600 focus:ring-1 focus:ring-ink-600; }
+
+  .badge { @apply inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap; }
+  .card { @apply rounded-lg border border-line bg-card; }
+  .btn { @apply inline-flex min-h-[34px] items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-ink-800 text-white hover:bg-ink-900 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white; }
+  .btn-gold { @apply btn-primary; }
+  .btn-secondary { @apply btn border border-line-strong bg-card text-ink-900 hover:bg-paper-sunk; }
+  .btn-danger { @apply btn border border-red-200 bg-red-50 text-red-700 hover:bg-red-100; }
+  .input { @apply min-h-[34px] w-full rounded-md border border-line-strong bg-card px-2.5 py-1.5 text-[13px] text-ink-900 transition-colors placeholder:text-mute hover:border-ink-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600; }
   .label { @apply mb-1 block text-xs font-medium text-ink-700; }
-  .eyebrow { @apply text-xs font-semibold uppercase tracking-wider text-ink-600; }
+  .eyebrow { @apply text-[11px] font-semibold uppercase tracking-wider text-mute; }
+  .link { @apply text-blue-600 hover:underline; }
 }
 
-/* Dark theme: remap the hard-coded Tailwind palette colours (status badges, notices) to readable equivalents. */
+/* Dark theme semantic badge remapping */
 .dark .bg-white, .dark .hover:bg-white:hover { background-color: rgb(var(--paper-raised)); }
+.dark .bg-zinc-50 { background-color: rgb(161 161 170 / 0.08); }
+.dark .bg-zinc-100 { background-color: rgb(161 161 170 / 0.16); }
+.dark .border-zinc-200, .dark .border-zinc-300 { border-color: rgb(161 161 170 / 0.28); }
+.dark .text-zinc-500, .dark .text-zinc-600, .dark .text-zinc-700 { color: rgb(212 212 216); }
+
 .dark .bg-slate-50 { background-color: rgb(100 116 139 / 0.12); }
 .dark .bg-slate-100 { background-color: rgb(100 116 139 / 0.2); }
-.dark .border-slate-300, .dark .border-slate-400 { border-color: rgb(100 116 139 / 0.4); }
+.dark .border-slate-200, .dark .border-slate-300, .dark .border-slate-400 { border-color: rgb(100 116 139 / 0.35); }
 .dark .text-slate-600, .dark .text-slate-700, .dark .text-slate-800, .dark .text-slate-900 { color: rgb(203 213 225); }
+
 .dark .bg-gray-50 { background-color: rgb(156 163 175 / 0.12); }
 .dark .bg-gray-100 { background-color: rgb(156 163 175 / 0.2); }
-.dark .border-gray-300, .dark .border-gray-400 { border-color: rgb(156 163 175 / 0.4); }
+.dark .border-gray-200, .dark .border-gray-300, .dark .border-gray-400 { border-color: rgb(156 163 175 / 0.35); }
 .dark .text-gray-600, .dark .text-gray-700, .dark .text-gray-800, .dark .text-gray-900 { color: rgb(209 213 219); }
+
 .dark .bg-sky-50 { background-color: rgb(56 189 248 / 0.12); }
 .dark .bg-sky-100 { background-color: rgb(56 189 248 / 0.2); }
-.dark .border-sky-300, .dark .border-sky-400 { border-color: rgb(56 189 248 / 0.4); }
+.dark .border-sky-200, .dark .border-sky-300, .dark .border-sky-400 { border-color: rgb(56 189 248 / 0.35); }
 .dark .text-sky-600, .dark .text-sky-700, .dark .text-sky-800, .dark .text-sky-900 { color: rgb(125 211 252); }
-.dark .bg-blue-50 { background-color: rgb(96 165 250 / 0.12); }
-.dark .bg-blue-100 { background-color: rgb(96 165 250 / 0.2); }
-.dark .border-blue-300, .dark .border-blue-400 { border-color: rgb(96 165 250 / 0.4); }
+
+.dark .bg-blue-50 { background-color: rgb(59 130 246 / 0.12); }
+.dark .bg-blue-100 { background-color: rgb(59 130 246 / 0.2); }
+.dark .border-blue-200, .dark .border-blue-300, .dark .border-blue-400 { border-color: rgb(59 130 246 / 0.35); }
 .dark .text-blue-600, .dark .text-blue-700, .dark .text-blue-800, .dark .text-blue-900 { color: rgb(147 197 253); }
-.dark .bg-amber-50 { background-color: rgb(251 191 36 / 0.12); }
-.dark .bg-amber-100 { background-color: rgb(251 191 36 / 0.2); }
-.dark .border-amber-300, .dark .border-amber-400 { border-color: rgb(251 191 36 / 0.4); }
+
+.dark .bg-indigo-50 { background-color: rgb(99 102 241 / 0.12); }
+.dark .bg-indigo-100 { background-color: rgb(99 102 241 / 0.2); }
+.dark .border-indigo-200, .dark .border-indigo-300 { border-color: rgb(99 102 241 / 0.35); }
+.dark .text-indigo-700, .dark .text-indigo-800 { color: rgb(165 180 252); }
+
+.dark .bg-amber-50 { background-color: rgb(245 158 11 / 0.12); }
+.dark .bg-amber-100 { background-color: rgb(245 158 11 / 0.2); }
+.dark .border-amber-200, .dark .border-amber-300, .dark .border-amber-400 { border-color: rgb(245 158 11 / 0.35); }
 .dark .text-amber-600, .dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900 { color: rgb(252 211 77); }
-.dark .bg-teal-50 { background-color: rgb(45 212 191 / 0.12); }
-.dark .bg-teal-100 { background-color: rgb(45 212 191 / 0.2); }
-.dark .border-teal-300, .dark .border-teal-400 { border-color: rgb(45 212 191 / 0.4); }
+
+.dark .bg-teal-50 { background-color: rgb(20 184 166 / 0.12); }
+.dark .bg-teal-100 { background-color: rgb(20 184 166 / 0.2); }
+.dark .border-teal-200, .dark .border-teal-300, .dark .border-teal-400 { border-color: rgb(20 184 166 / 0.35); }
 .dark .text-teal-600, .dark .text-teal-700, .dark .text-teal-800, .dark .text-teal-900 { color: rgb(94 234 212); }
-.dark .bg-violet-50 { background-color: rgb(167 139 250 / 0.12); }
-.dark .bg-violet-100 { background-color: rgb(167 139 250 / 0.2); }
-.dark .border-violet-300, .dark .border-violet-400 { border-color: rgb(167 139 250 / 0.4); }
+
+.dark .bg-purple-50 { background-color: rgb(168 85 247 / 0.12); }
+.dark .bg-purple-100 { background-color: rgb(168 85 247 / 0.2); }
+.dark .border-purple-200, .dark .border-purple-300 { border-color: rgb(168 85 247 / 0.35); }
+.dark .text-purple-700, .dark .text-purple-800 { color: rgb(216 180 254); }
+
+.dark .bg-violet-50 { background-color: rgb(139 92 246 / 0.12); }
+.dark .bg-violet-100 { background-color: rgb(139 92 246 / 0.2); }
+.dark .border-violet-200, .dark .border-violet-300, .dark .border-violet-400 { border-color: rgb(139 92 246 / 0.35); }
 .dark .text-violet-600, .dark .text-violet-700, .dark .text-violet-800, .dark .text-violet-900 { color: rgb(196 181 253); }
-.dark .bg-green-50 { background-color: rgb(74 222 128 / 0.12); }
-.dark .bg-green-100 { background-color: rgb(74 222 128 / 0.2); }
-.dark .border-green-300, .dark .border-green-400 { border-color: rgb(74 222 128 / 0.4); }
+
+.dark .bg-green-50 { background-color: rgb(34 197 94 / 0.12); }
+.dark .bg-green-100 { background-color: rgb(34 197 94 / 0.2); }
+.dark .border-green-200, .dark .border-green-300, .dark .border-green-400 { border-color: rgb(34 197 94 / 0.35); }
 .dark .text-green-600, .dark .text-green-700, .dark .text-green-800, .dark .text-green-900 { color: rgb(134 239 172); }
-.dark .bg-red-50 { background-color: rgb(248 113 113 / 0.12); }
-.dark .bg-red-100 { background-color: rgb(248 113 113 / 0.2); }
-.dark .border-red-300, .dark .border-red-400 { border-color: rgb(248 113 113 / 0.4); }
-.dark .text-red-600, .dark .text-red-700, .dark .text-red-800, .dark .text-red-900 { color: rgb(252 165 165); }
-.dark .bg-emerald-50 { background-color: rgb(52 211 153 / 0.12); }
-.dark .bg-emerald-100 { background-color: rgb(52 211 153 / 0.2); }
-.dark .border-emerald-300, .dark .border-emerald-400 { border-color: rgb(52 211 153 / 0.4); }
+
+.dark .bg-emerald-50 { background-color: rgb(16 185 129 / 0.12); }
+.dark .bg-emerald-100 { background-color: rgb(16 185 129 / 0.2); }
+.dark .border-emerald-200, .dark .border-emerald-300, .dark .border-emerald-400 { border-color: rgb(16 185 129 / 0.35); }
 .dark .text-emerald-600, .dark .text-emerald-700, .dark .text-emerald-800, .dark .text-emerald-900 { color: rgb(110 231 183); }
+
+.dark .bg-red-50 { background-color: rgb(239 68 68 / 0.12); }
+.dark .bg-red-100 { background-color: rgb(239 68 68 / 0.2); }
+.dark .border-red-200, .dark .border-red-300, .dark .border-red-400 { border-color: rgb(239 68 68 / 0.35); }
+.dark .text-red-600, .dark .text-red-700, .dark .text-red-800, .dark .text-red-900 { color: rgb(252 165 165); }

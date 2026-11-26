@@ -44,7 +44,7 @@ export function ProgrammeRow({ p, actions }: { p: ProgrammeDto; actions?: React.
       </div>
       {p.tuitionNote && <p className="text-xs text-ink-700">Tuition: {p.tuitionNote}</p>}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        {p.applicationUrl && <a href={p.applicationUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[32px] items-center gap-1 font-semibold text-clay-600 hover:underline">Apply <Icon name="external" size={11} /></a>}
+        {p.applicationUrl && <a href={p.applicationUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[32px] items-center gap-1 font-semibold text-blue-600 hover:underline">Apply <Icon name="external" size={11} /></a>}
         {p.website && <a href={p.website} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[32px] items-center gap-1 font-medium text-ink-700 hover:underline">Programme page <Icon name="external" size={11} /></a>}
         {verified && p.deadlinesVerifiedAt ? (
           <span className="inline-flex items-center gap-1 text-emerald-700"><Icon name="check" size={12} /> Confirmed {fmtDay(p.deadlinesVerifiedAt)}{p.sourceUrl && <> · <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">source</a></>}</span>
@@ -65,7 +65,7 @@ function Facts({ u }: { u: UniversityDto }) {
       {u.studentCount ? <span className={chip}><Icon name="users" size={11} /> {u.studentCount.toLocaleString("en-US")}</span> : null}
       {u.foundedYear ? <span className={chip}>Est. {u.foundedYear}</span> : null}
       {u.doctorateRight && <span className="badge border-emerald-300 bg-emerald-50 text-emerald-800">PhD</span>}
-      {u.programmeCount > 0 && <span className="badge border-clay-400/40 bg-clay-50 text-clay-600">{u.programmeCount} programme{u.programmeCount === 1 ? "" : "s"}</span>}
+      {u.programmeCount > 0 && <span className="badge border-blue-500/40 bg-blue-50 text-blue-600">{u.programmeCount} programme{u.programmeCount === 1 ? "" : "s"}</span>}
     </div>
   );
 }
@@ -83,7 +83,7 @@ export default function UniversityCard({ u, actions, programmeActions }: { u: Un
         <div className="min-w-0 flex-1">
           <h2 className="line-clamp-2 text-[14px] font-semibold leading-snug" title={u.name}>
             {/* stretched link: the whole card opens the detail page, while buttons inside stay clickable */}
-            <Link href={`/universities/${u.slug}`} className="after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-clay-500">{u.name}</Link>
+            <Link href={`/universities/${u.slug}`} className="after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-blue-500">{u.name}</Link>
           </h2>
           <p className="mt-0.5 flex items-center gap-1 text-xs text-mute">
             <Icon name="pin" size={12} className="shrink-0" />
@@ -103,7 +103,7 @@ export default function UniversityCard({ u, actions, programmeActions }: { u: Un
         </ul>
       )}
       {u.programmes.length > COLLAPSED_COUNT && (
-        <button type="button" onClick={() => setAll((v) => !v)} aria-expanded={all} className="relative z-10 inline-flex min-h-[36px] items-center gap-1 self-start text-xs font-semibold text-clay-600 hover:underline">
+        <button type="button" onClick={() => setAll((v) => !v)} aria-expanded={all} className="relative z-10 inline-flex min-h-[36px] items-center gap-1 self-start text-xs font-semibold text-blue-600 hover:underline">
           {all ? "Show fewer" : `Show ${hidden} more programme${hidden === 1 ? "" : "s"}`}
           <Icon name={all ? "chevronUp" : "chevronDown"} size={13} />
         </button>
@@ -135,7 +135,7 @@ export function UniversityRow({ u, actions, programmeActions }: { u: UniversityD
         </div>
         {actions}
         {has && (
-          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex min-h-[36px] shrink-0 items-center gap-1 rounded-full border border-clay-400/40 bg-clay-50 px-3 text-xs font-semibold text-clay-600">
+          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex min-h-[36px] shrink-0 items-center gap-1 rounded-full border border-blue-500/40 bg-blue-50 px-3 text-xs font-semibold text-blue-600">
             {u.programmes.length} <span className="hidden sm:inline">programme{u.programmes.length === 1 ? "" : "s"}</span> <Icon name={open ? "chevronUp" : "chevronDown"} size={12} />
           </button>
         )}

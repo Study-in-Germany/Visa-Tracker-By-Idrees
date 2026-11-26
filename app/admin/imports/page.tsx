@@ -22,7 +22,7 @@ function statusOf(job: JobDto): { text: string; cls: string } {
   if (job.interrupted) return { text: "Stopped early", cls: "bg-amber-100 text-amber-800" };
   if (job.status === "DONE") return { text: "Finished", cls: "bg-green-100 text-green-800" };
   if (job.status === "FAILED") return { text: "Failed", cls: "bg-red-100 text-red-800" };
-  if (job.status === "RUNNING") return { text: "Running", cls: "bg-clay-100 text-clay-600" };
+  if (job.status === "RUNNING") return { text: "Running", cls: "bg-blue-100 text-blue-600" };
   return { text: "Waiting", cls: "bg-slate-100 text-slate-700" };
 }
 
@@ -50,13 +50,13 @@ function HistoryRow({ job, busy, onResume }: { job: JobDto; busy: boolean; onRes
         {unfinished && !busy && <button type="button" onClick={onResume} className="btn-secondary !min-h-[34px] ml-auto !px-3 text-xs">Continue</button>}
       </div>
       {job.status !== "DONE" && job.status !== "FAILED" && (
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-sunk" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress"><div className="h-full rounded-full bg-clay-500" style={{ width: `${pct}%` }} /></div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-sunk" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress"><div className="h-full rounded-full bg-blue-500" style={{ width: `${pct}%` }} /></div>
       )}
       <p className="mt-1.5 text-xs text-mute"><Summary job={job} /></p>
       {job.error && <p className="mt-1 text-xs text-red-700">{job.error}</p>}
       {job.log.length > 0 && (
         <>
-          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="mt-1 text-xs font-medium text-clay-600 hover:underline">{open ? "Hide details" : "Show details"}</button>
+          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="mt-1 text-xs font-medium text-blue-600 hover:underline">{open ? "Hide details" : "Show details"}</button>
           {open && <pre className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-paper-sunk p-2.5 text-[11px] leading-relaxed">{job.log.join("\n")}</pre>}
         </>
       )}
@@ -110,7 +110,7 @@ function ReviewList() {
           <div className="grid gap-2 text-xs sm:grid-cols-2">
             <div className="rounded-lg bg-paper p-2.5"><p className="font-semibold text-ink-700">Saved now</p><p className="mt-0.5 text-mute">Winter {fmtDay(p.winterDeadline)} · Summer {fmtDay(p.summerDeadline)}</p></div>
             {p.pendingChange && (
-              <div className="rounded-lg bg-clay-50 p-2.5"><p className="font-semibold text-clay-600">New from update</p><p className="mt-0.5 text-ink-700">Winter {p.pendingChange.winterDeadline ? fmtDay(p.pendingChange.winterDeadline) : "—"} · Summer {p.pendingChange.summerDeadline ? fmtDay(p.pendingChange.summerDeadline) : "—"}{p.pendingChange.sourceUrl && <> · <a className="text-clay-600 hover:underline" href={p.pendingChange.sourceUrl} target="_blank" rel="noopener noreferrer">see source</a></>}</p></div>
+              <div className="rounded-lg bg-blue-50 p-2.5"><p className="font-semibold text-blue-600">New from update</p><p className="mt-0.5 text-ink-700">Winter {p.pendingChange.winterDeadline ? fmtDay(p.pendingChange.winterDeadline) : "—"} · Summer {p.pendingChange.summerDeadline ? fmtDay(p.pendingChange.summerDeadline) : "—"}{p.pendingChange.sourceUrl && <> · <a className="text-blue-600 hover:underline" href={p.pendingChange.sourceUrl} target="_blank" rel="noopener noreferrer">see source</a></>}</p></div>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -151,9 +151,9 @@ export default function ImportsPage() {
       {(startError || runError) && <div className="mb-3"><Notice tone="error">{startError || runError}</Notice></div>}
 
       {busy && (
-        <div className="card mb-4 border-l-4 border-l-clay-500 p-4" role="status">
-          <p className="flex items-center gap-2 text-[13px] font-semibold"><span className="h-2 w-2 animate-pulse rounded-full bg-clay-500" /> Working… {running ? `${KIND_LABEL[running.kind] ?? "Update"}: ${running.processed} of ${running.total || "?"}` : ""}</p>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-paper-sunk"><div className="h-full rounded-full bg-clay-500 transition-all" style={{ width: `${running?.total ? Math.round((running.processed / running.total) * 100) : 8}%` }} /></div>
+        <div className="card mb-4 border-l-4 border-l-blue-500 p-4" role="status">
+          <p className="flex items-center gap-2 text-[13px] font-semibold"><span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" /> Working… {running ? `${KIND_LABEL[running.kind] ?? "Update"}: ${running.processed} of ${running.total || "?"}` : ""}</p>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-paper-sunk"><div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${running?.total ? Math.round((running.processed / running.total) * 100) : 8}%` }} /></div>
           <p className="mt-2 text-xs text-mute">Please keep this page open until it finishes. If you close it by accident, come back and press Continue below.</p>
         </div>
       )}
@@ -167,7 +167,7 @@ export default function ImportsPage() {
             </Task>
             <Task icon="book" title="Programmes and deadlines" what="Adds courses and application deadlines from a spreadsheet (CSV or Excel)." when="When you have researched new programmes. Start from our template so the columns are right.">
               <FileButton label="Choose spreadsheet" accept=".csv,.xlsx" disabled={busy} onFile={(f) => start("programmes", f)} />
-              <a href="/api/admin/imports/template" className="text-xs font-semibold text-clay-600 hover:underline">Download template</a>
+              <a href="/api/admin/imports/template" className="text-xs font-semibold text-blue-600 hover:underline">Download template</a>
             </Task>
           </div>
         </section>

@@ -3,31 +3,53 @@
 import { VISA_STATUS_HEX, VISA_STATUS_SHORT, VISA_STATUS_LABELS } from "@/lib/constants";
 
 export const CHIP_STATUSES = [
-  "WAITING_LIST", "WAITING_FOR_SUBMISSION", "SUBMISSION_RECEIVED", "UNDER_CORRECTION",
-  "APPOINTMENT_SCHEDULED", "PROCESSING", "VISA_ISSUED", "VISA_REJECTED", "WITHDRAWN",
+  "WAITING_LIST",
+  "WAITING_FOR_SUBMISSION",
+  "SUBMISSION_RECEIVED",
+  "UNDER_CORRECTION",
+  "APPOINTMENT_SCHEDULED",
+  "PROCESSING",
+  "VISA_ISSUED",
+  "VISA_REJECTED",
+  "WITHDRAWN",
 ] as const;
 
 /**
- * One-line status filter. Each chip is a colour dot, a short label and a live count.
- * Scrolls sideways when it does not fit, so it never adds a second row.
+ * Compact neutral status filter bar. Active state uses primary dark neutral;
+ * each item displays a subtle 6px semantic indicator dot and count.
  */
 export default function StatusChips({
-  value, onChange, counts, total,
+  value,
+  onChange,
+  counts,
+  total,
 }: {
   value: string;
   onChange: (v: string) => void;
   counts?: Record<string, number>;
   total?: number;
 }) {
-  const chip = "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-semibold transition-colors";
-  const count = (n?: number) => (n === undefined ? null : <span className="tabular-nums opacity-70">{n.toLocaleString("en-US")}</span>);
+  const base =
+    "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-medium transition-colors";
+  const count = (n?: number) =>
+    n === undefined ? null : <span className="tabular-nums opacity-65">{n.toLocaleString("en-US")}</span>;
+
   return (
     <div
       role="group"
       aria-label="Filter by status"
-      className="-mx-3 flex h-10 items-center gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+      className="-mx-3 flex items-center gap-1.5 overflow-x-auto px-3 py-0.5 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
     >
-      <button type="button" aria-pressed={!value} onClick={() => onChange("")} className={`${chip} ${!value ? "border-ink-900 bg-ink-900 text-paper-raised" : "border-line-strong bg-card text-ink-800 hover:bg-paper-sunk"}`}>
+      <button
+        type="button"
+        aria-pressed={!value}
+        onClick={() => onChange("")}
+        className={`${base} ${
+          !value
+            ? "border-ink-800 bg-ink-800 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
+            : "border-line bg-card text-ink-700 hover:bg-paper-sunk"
+        }`}
+      >
         All {count(total)}
       </button>
       {CHIP_STATUSES.map((k) => {
@@ -41,10 +63,13 @@ export default function StatusChips({
             aria-pressed={on}
             title={VISA_STATUS_LABELS[k]}
             onClick={() => onChange(on ? "" : k)}
-            className={`${chip} ${on ? "text-white" : "text-ink-800 hover:brightness-95"}`}
-            style={on ? { background: hex, borderColor: hex } : { background: `${hex}14`, borderColor: `${hex}55` }}
+            className={`${base} ${
+              on
+                ? "border-ink-800 bg-ink-800 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
+                : "border-line bg-card text-ink-700 hover:bg-paper-sunk"
+            }`}
           >
-            <span className="h-2 w-2 rounded-full" style={{ background: on ? "#fff" : hex }} aria-hidden="true" />
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: hex }} aria-hidden="true" />
             {VISA_STATUS_SHORT[k]}
             {count(n ?? (counts ? 0 : undefined))}
           </button>

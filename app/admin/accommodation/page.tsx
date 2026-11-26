@@ -40,7 +40,7 @@ function Tabs({ value, onChange, reportCount }: { value: string; onChange: (v: s
           className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${value === t.value ? "border-ink-800 bg-ink-800 text-paper-raised" : "border-line-strong bg-paper-raised text-ink-800 hover:bg-paper-sunk"}`}
         >
           {t.label}
-          {t.value === "reports" && reportCount > 0 && <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-clay-500 px-1 text-[11px] text-white">{reportCount}</span>}
+          {t.value === "reports" && reportCount > 0 && <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-blue-500 px-1 text-[11px] text-white">{reportCount}</span>}
         </button>
       ))}
     </div>
@@ -145,7 +145,7 @@ function AccommodationInner() {
       <PageHeader
         title="Accommodation"
         description="Rooms and flats posted for students. Add your own, approve new posts, or remove anything that looks wrong."
-        actions={<Link href="/admin/accommodation/new" className="btn-gold w-full sm:w-auto"><Icon name="plus" size={14} /> Add accommodation</Link>}
+        actions={<Link href="/admin/accommodation/new" className="btn-primary w-full sm:w-auto"><Icon name="plus" size={14} /> Add accommodation</Link>}
       />
       <Tabs value={tab} onChange={setTab} reportCount={reports.data?.count ?? 0} />
       {tab === "reports" ? <ReportsTab /> : <ListingsTab key={tab} status={tab} />}

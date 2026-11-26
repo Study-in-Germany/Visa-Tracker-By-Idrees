@@ -33,33 +33,32 @@ export const VISA_STATUS_ORDER = [
   "OTHER",
 ];
 
-// One palette, used by chips, badges, row accents, cards and charts.
-// slate · sky · blue · amber · teal · violet · green · red · grey
+// Semantic status palette: subtle backgrounds and crisp contrast without visual noise.
 export const VISA_STATUS_COLORS: Record<string, string> = {
-  WAITING_LIST: "bg-slate-100 text-slate-700 border-slate-300",
-  WAITING_FOR_SUBMISSION: "bg-sky-50 text-sky-800 border-sky-300",
-  SUBMISSION_RECEIVED: "bg-blue-50 text-blue-800 border-blue-300",
-  UNDER_CORRECTION: "bg-amber-50 text-amber-800 border-amber-300",
-  APPOINTMENT_SCHEDULED: "bg-teal-50 text-teal-800 border-teal-300",
-  PROCESSING: "bg-violet-50 text-violet-800 border-violet-300",
-  VISA_ISSUED: "bg-green-50 text-green-800 border-green-300",
-  VISA_REJECTED: "bg-red-50 text-red-800 border-red-300",
-  WITHDRAWN: "bg-gray-100 text-gray-600 border-gray-300",
-  OTHER: "bg-gray-100 text-gray-600 border-gray-300",
+  WAITING_LIST: "bg-zinc-100 text-zinc-700 border-zinc-200",
+  WAITING_FOR_SUBMISSION: "bg-blue-50 text-blue-700 border-blue-200",
+  SUBMISSION_RECEIVED: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  UNDER_CORRECTION: "bg-amber-50 text-amber-800 border-amber-200",
+  APPOINTMENT_SCHEDULED: "bg-teal-50 text-teal-800 border-teal-200",
+  PROCESSING: "bg-purple-50 text-purple-700 border-purple-200",
+  VISA_ISSUED: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  VISA_REJECTED: "bg-red-50 text-red-800 border-red-200",
+  WITHDRAWN: "bg-zinc-50 text-zinc-500 border-zinc-200",
+  OTHER: "bg-zinc-50 text-zinc-500 border-zinc-200",
 };
 
-// Hex values for charts and row accents, kept in step with VISA_STATUS_COLORS.
+// Hex values for charts and dots, aligned with VISA_STATUS_COLORS.
 export const VISA_STATUS_HEX: Record<string, string> = {
-  WAITING_LIST: "#64748b",
-  WAITING_FOR_SUBMISSION: "#0ea5e9",
-  SUBMISSION_RECEIVED: "#3b82f6",
-  UNDER_CORRECTION: "#d97706",
-  APPOINTMENT_SCHEDULED: "#0d9488",
-  PROCESSING: "#7c3aed",
-  VISA_ISSUED: "#16a34a",
-  VISA_REJECTED: "#dc2626",
-  WITHDRAWN: "#94a3b8",
-  OTHER: "#cbd5e1",
+  WAITING_LIST: "#6B7280",
+  WAITING_FOR_SUBMISSION: "#2563EB",
+  SUBMISSION_RECEIVED: "#4F46E5",
+  UNDER_CORRECTION: "#D97706",
+  APPOINTMENT_SCHEDULED: "#0D9488",
+  PROCESSING: "#7C3AED",
+  VISA_ISSUED: "#16A34A",
+  VISA_REJECTED: "#DC2626",
+  WITHDRAWN: "#9CA3AF",
+  OTHER: "#9CA3AF",
 };
 
 /** Compact labels for chips and narrow layouts. */
@@ -92,9 +91,9 @@ export const APPROVAL_LABELS: Record<string, string> = {
 };
 
 export const APPROVAL_COLORS: Record<string, string> = {
-  PENDING_REVIEW: "bg-ochre-50 text-ochre-700 border-ochre-500/40",
-  APPROVED: "bg-emerald-50 text-emerald-800 border-emerald-300",
-  REJECTED: "bg-red-50 text-red-800 border-red-300",
+  PENDING_REVIEW: "bg-amber-50 text-amber-800 border-amber-200",
+  APPROVED: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  REJECTED: "bg-red-50 text-red-800 border-red-200",
 };
 
 export const GENDER_LABELS: Record<string, string> = {

@@ -31,6 +31,7 @@ export const submitApplicantSchema = z.object({
   appointmentDate: optionalDate,
   interviewDate: optionalDate,
   decisionDate: optionalDate,
+  visaStatus: z.enum(VISA_STATUS_ORDER as [string, ...string[]]).optional(),
   isAnonymous: z.boolean().optional(),
 });
 
@@ -209,4 +210,5 @@ export const milestoneSchema = z.object({
   milestone: z.enum(["waitingListDate", "submissionInviteDate", "documentSubmissionDate", "correctionRequestDate", "correctionSubmittedDate", "appointmentDate", "interviewDate", "decisionDate"]),
   date: requiredDate.nullable(),
   note: z.string().trim().max(300).optional().or(z.literal("")),
+  outcome: z.enum(["VISA_ISSUED", "VISA_REJECTED", "WITHDRAWN"]).optional(),
 });

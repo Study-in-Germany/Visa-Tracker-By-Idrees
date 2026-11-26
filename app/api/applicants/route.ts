@@ -8,6 +8,9 @@ import bcrypt from "bcryptjs";
 import { waitingListWhere } from "@/lib/period";
 import { TEAM_PUBLIC_ID } from "@/lib/listings";
 import { VISA_STATUS_LABELS, CONSULATES } from "@/lib/constants";
+import { deriveVisaStatus } from "@/lib/status";
+import { getActiveQueueRanks } from "@/lib/queue-ranks";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 const DATE_FIELDS = ["waitingListDate", "submissionInviteDate", "documentSubmissionDate", "correctionRequestDate", "correctionSubmittedDate", "appointmentDate", "interviewDate", "decisionDate"] as const;
 
@@ -23,7 +26,7 @@ function parseDayRange(q: string): { gte: Date; lt: Date } | null {
   return { gte: start, lt: new Date(start.getTime() + 86400000) };
 }
 
-const SORTABLE = new Set(["publicId", "university", "intake", "consulate", "waitingListDate", "documentSubmissionDate", "appointmentDate", "visaStatus", "createdAt"]);
+const SORTABLE = new Set(["publicId", "university", "intake", "consulate", "waitingListDate", "submissionInviteDate", "documentSubmissionDate", "appointmentDate", "decisionDate", "visaStatus", "updatedAt", "createdAt"]);
 
 // GET /api/applicants — public dashboard data (approved only, unless admin)
 export async function GET(req: NextRequest) {
@@ -95,7 +98,7 @@ export async function GET(req: NextRequest) {
     ? [{ [sortParam]: dir }, { createdAt: "asc" }]
     : [{ waitingListDate: "asc" }, { createdAt: "asc" }];
 
-  const [total, applicants] = await Promise.all([
+  const [total, applicants, ranks] = await Promise.all([
     prisma.applicant.count({ where }),
     prisma.applicant.findMany({
     where,
@@ -120,24 +123,34 @@ export async function GET(req: NextRequest) {
       visaStatus: true,
       approval: true,
       isAnonymous: true,
+      updatedAt: true,
       createdAt: true,
     },
     }),
+    getActiveQueueRanks(),
   ]);
 
   // Applicants who chose to stay anonymous keep their name hidden on the public view.
   const display = applicants.map((a) => ({
     ...a,
     name: !session && a.isAnonymous ? null : a.name,
+    queuePosition: ranks[a.id] ?? null,
   }));
 
-  return NextResponse.json({
-    applicants: display,
-    count: total,
-    page: page || 1,
-    pageSize: page ? pageSize : total,
-    pageCount: page ? Math.max(1, Math.ceil(total / pageSize)) : 1,
-  });
+  return NextResponse.json(
+    {
+      applicants: display,
+      count: total,
+      page: page || 1,
+      pageSize: page ? pageSize : total,
+      pageCount: page ? Math.max(1, Math.ceil(total / pageSize)) : 1,
+    },
+    {
+      headers: session
+        ? { "Cache-Control": "private, no-store" }
+        : { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120", Vary: "Cookie" },
+    },
+  );
 }
 
 // POST /api/applicants — student self-submission (goes to PENDING_REVIEW)
@@ -156,6 +169,17 @@ export async function POST(req: NextRequest) {
   const accessCode = generateAccessCode();
   const accessCodeHash = await bcrypt.hash(accessCode, 10);
 
+  const dateFields = {
+    waitingListDate: data.waitingListDate ? new Date(data.waitingListDate) : null,
+    submissionInviteDate: data.submissionInviteDate ? new Date(data.submissionInviteDate) : null,
+    documentSubmissionDate: data.documentSubmissionDate ? new Date(data.documentSubmissionDate) : null,
+    correctionRequestDate: data.correctionRequestDate ? new Date(data.correctionRequestDate) : null,
+    appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
+    interviewDate: data.interviewDate ? new Date(data.interviewDate) : null,
+    decisionDate: data.decisionDate ? new Date(data.decisionDate) : null,
+  };
+  const derivedStatus = deriveVisaStatus(dateFields, data.visaStatus);
+
   let applicant;
   try {
     applicant = await createApplicantWithTrackingId({
@@ -173,24 +197,20 @@ export async function POST(req: NextRequest) {
     waitingListCategory: data.waitingListCategory || null,
     sourceOfInformation: data.sourceOfInformation || null,
     additionalDocuments: data.additionalDocuments || null,
-    waitingListDate: data.waitingListDate ? new Date(data.waitingListDate) : null,
-    submissionInviteDate: data.submissionInviteDate ? new Date(data.submissionInviteDate) : null,
-    documentSubmissionDate: data.documentSubmissionDate ? new Date(data.documentSubmissionDate) : null,
-    correctionRequestDate: data.correctionRequestDate ? new Date(data.correctionRequestDate) : null,
-    appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
-    interviewDate: data.interviewDate ? new Date(data.interviewDate) : null,
-    decisionDate: data.decisionDate ? new Date(data.decisionDate) : null,
+    ...dateFields,
     isAnonymous: data.isAnonymous ?? false,
     approval: "PENDING_REVIEW",
-    visaStatus: "WAITING_LIST",
+    visaStatus: derivedStatus,
     history: {
-      create: [{ visaStatus: "WAITING_LIST", note: "Entry submitted by applicant" }],
+      create: [{ visaStatus: derivedStatus, note: "Entry submitted by applicant" }],
     },
     });
   } catch (err) {
     console.error("Submit failed:", err);
     return NextResponse.json({ error: "We could not save your entry right now. Please try again in a moment." }, { status: 500 });
   }
+
+  invalidateTags(CACHE_TAGS.APPLICANTS);
 
   return NextResponse.json(
     {

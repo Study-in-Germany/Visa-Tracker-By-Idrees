@@ -40,7 +40,7 @@ export default function ContactReveal({ listingId }: { listingId: string }) {
   if (!contact) {
     return (
       <div className="space-y-2">
-        <button type="button" onClick={reveal} disabled={busy} className="btn-gold w-full !min-h-[52px] !rounded-full text-[16px]">
+        <button type="button" onClick={reveal} disabled={busy} className="btn-primary w-full !min-h-[52px] !rounded-full text-[16px]">
           <Icon name="phone" size={15} /> {busy ? "Loading…" : "Show contact details"}
         </button>
         {error && <p role="alert" className="text-xs text-red-700">{error}</p>}

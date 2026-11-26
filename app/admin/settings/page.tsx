@@ -88,7 +88,7 @@ function PasswordCard({ email }: { email?: string }) {
 function Link2({ href, icon, title, desc }: { href: string; icon: IconName; title: string; desc: string }) {
   return (
     <Link href={href} className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-paper">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-paper-sunk text-ink-700 group-hover:bg-clay-100 group-hover:text-clay-600"><Icon name={icon} size={16} /></span>
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-paper-sunk text-ink-700 group-hover:bg-blue-100 group-hover:text-blue-600"><Icon name={icon} size={16} /></span>
       <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">{title}</span><span className="block truncate text-xs text-mute">{desc}</span></span>
       <Icon name="chevronRight" size={15} className="text-mute" />
     </Link>

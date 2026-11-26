@@ -6,6 +6,8 @@ import { parseCalendarDay } from "@/lib/period";
 import { generateAccessCode } from "@/lib/ids";
 import { createApplicantWithTrackingId } from "@/lib/create-applicant";
 import { CONSULATES, VISA_STATUS_LABELS, VISA_STATUS_ORDER, GENDER_LABELS } from "@/lib/constants";
+import { deriveVisaStatus } from "@/lib/status";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 const DATE_COLUMNS: Record<string, string> = {
   WaitingListDate: "waitingListDate",
@@ -34,9 +36,9 @@ function matchConsulate(value: string | undefined): string {
   return found || CONSULATES[0];
 }
 
-function matchVisaStatus(value: string | undefined): string {
+function matchVisaStatus(value: string | undefined): string | null {
   const raw = (value || "").trim();
-  if (!raw) return "WAITING_LIST";
+  if (!raw) return null;
   const byKey = VISA_STATUS_ORDER.find(function (k) {
     return k.toLowerCase() === raw.toLowerCase();
   });
@@ -44,7 +46,7 @@ function matchVisaStatus(value: string | undefined): string {
   const byLabel = Object.entries(VISA_STATUS_LABELS).find(function (entry) {
     return entry[1].toLowerCase() === raw.toLowerCase();
   });
-  return byLabel ? byLabel[0] : "WAITING_LIST";
+  return byLabel ? byLabel[0] : null;
 }
 
 function matchGender(value: string | undefined): string | null {
@@ -117,6 +119,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
+      const resolvedStatus = deriveVisaStatus(dateFields, matchVisaStatus(row["VisaStatus"]));
       const created = await createApplicantWithTrackingId({
         accessCodeHash: accessCodeHash,
         name: name,
@@ -134,7 +137,7 @@ export async function POST(req: NextRequest) {
         additionalDocuments: row["AdditionalDocuments"] || null,
         isAnonymous: parseBool(row["Anonymous"], true),
         approval: "APPROVED",
-        visaStatus: matchVisaStatus(row["VisaStatus"]) as any,
+        visaStatus: resolvedStatus as any,
         waitingListDate: dateFields["waitingListDate"],
         submissionInviteDate: dateFields["submissionInviteDate"],
         documentSubmissionDate: dateFields["documentSubmissionDate"],
@@ -146,7 +149,7 @@ export async function POST(req: NextRequest) {
         history: {
           create: [
             {
-              visaStatus: matchVisaStatus(row["VisaStatus"]) as any,
+              visaStatus: resolvedStatus as any,
               note: "Imported via CSV",
             },
           ],
@@ -164,6 +167,8 @@ export async function POST(req: NextRequest) {
   const skippedCount = results.filter(function (r) {
     return r.status === "skipped";
   }).length;
+
+  if (createdCount > 0) invalidateTags(CACHE_TAGS.APPLICANTS);
 
   return NextResponse.json({ createdCount: createdCount, skippedCount: skippedCount, results: results });
 }

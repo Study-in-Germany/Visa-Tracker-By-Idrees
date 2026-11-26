@@ -29,7 +29,7 @@ function MyListings() {
       ) : loading && items.length === 0 ? (
         <ListingGridSkeleton count={4} />
       ) : items.length === 0 ? (
-        <div className="card"><EmptyState title="You haven't posted anything yet" hint="Have a spare room or are moving out? Help the next student." action={<Link href="/accommodation/new" className="btn-gold mt-1">Post a place</Link>} /></div>
+        <div className="card"><EmptyState title="You haven't posted anything yet" hint="Have a spare room or are moving out? Help the next student." action={<Link href="/accommodation/new" className="btn-primary mt-1">Post a place</Link>} /></div>
       ) : (
         <div className={loading ? "opacity-60" : ""}>
           <ListingGrid>

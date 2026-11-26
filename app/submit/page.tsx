@@ -21,7 +21,7 @@ const initialForm = {
   university: "", program: "", intake: "", visaType: "",
   consulate: "Islamabad", sourceOfInformation: "", additionalDocuments: "",
   waitingListDate: "", submissionInviteDate: "", documentSubmissionDate: "", correctionRequestDate: "",
-  appointmentDate: "", interviewDate: "", decisionDate: "",
+  appointmentDate: "", interviewDate: "", decisionDate: "", visaStatus: "",
 };
 type Form = typeof initialForm;
 
@@ -32,7 +32,7 @@ const JOURNEY: { key: keyof Form; label: string }[] = [
   { key: "correctionRequestDate", label: "Correction requested" },
   { key: "appointmentDate", label: "Appointment booked" },
   { key: "interviewDate", label: "Interview" },
-  { key: "decisionDate", label: "Visa received" },
+  { key: "decisionDate", label: "Decision date" },
 ];
 
 const STEPS = [
@@ -124,8 +124,8 @@ export default function SubmitPage() {
     setError("");
     setLoading(true);
     try {
-      const { gender, ...rest } = form;
-      const data = await apiFetch("/api/applicants", jsonInit("POST", { ...rest, ...(gender ? { gender } : {}), isAnonymous: anonymous }));
+      const { gender, visaStatus, ...rest } = form;
+      const data = await apiFetch("/api/applicants", jsonInit("POST", { ...rest, ...(gender ? { gender } : {}), ...(visaStatus ? { visaStatus } : {}), isAnonymous: anonymous }));
       setResult({ publicId: data.publicId, accessCode: data.accessCode });
     } catch (err: any) {
       setError(err.message || "Please check the form — some fields are invalid.");
@@ -158,7 +158,7 @@ export default function SubmitPage() {
             <CopyRow label="Tracking ID" value={result.publicId} />
             <CopyRow label="Access code" value={result.accessCode} />
           </div>
-          <Link href="/login" className="btn-gold mt-4 w-full">Log in to my dashboard</Link>
+          <Link href="/login" className="btn-primary mt-4 w-full">Log in to my dashboard</Link>
         </Panel>
       </div>
     );
@@ -168,7 +168,7 @@ export default function SubmitPage() {
   const last = step === STEPS.length - 1;
   const actions = (
     <>
-      <button className="btn-gold !min-h-[46px] flex-1 lg:w-full lg:flex-none" disabled={loading}>
+      <button className="btn-primary !min-h-[42px] flex-1 lg:w-full lg:flex-none" disabled={loading}>
         {last ? (loading ? "Submitting…" : "Submit entry") : <>Next <Icon name="chevronRight" size={14} /></>}
       </button>
       {step > 0 && (
@@ -191,7 +191,7 @@ export default function SubmitPage() {
           <span className="text-xs text-mute">Step {step + 1} of {STEPS.length}</span>
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-sunk" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step + 1}>
-          <div className="h-full rounded-full bg-clay-500 transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+          <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
         </div>
       </div>
 
@@ -239,9 +239,25 @@ export default function SubmitPage() {
                     <Field label={j.label} htmlFor={`s-${j.key}`}>
                       <DatePicker id={`s-${j.key}`} label={j.label} value={form[j.key]} onChange={(v) => set(j.key, v)} />
                     </Field>
-                    {orderWarning(i) && <p className="mt-1 text-xs text-ochre-700">{orderWarning(i)}</p>}
+                    {orderWarning(i) && <p className="mt-1 text-xs text-amber-700">{orderWarning(i)}</p>}
                   </div>
                 ))}
+                {form.decisionDate && (
+                  <Field label="Decision outcome" htmlFor="s-visaStatus" className="sm:col-span-2">
+                    <Select
+                      id="s-visaStatus"
+                      label="Decision outcome"
+                      value={form.visaStatus}
+                      onChange={(v) => set("visaStatus", v)}
+                      options={[
+                        { value: "", label: "Still processing / not specified" },
+                        { value: "VISA_ISSUED", label: "Visa Issued" },
+                        { value: "VISA_REJECTED", label: "Visa Rejected" },
+                        { value: "WITHDRAWN", label: "Withdrawn" },
+                      ]}
+                    />
+                  </Field>
+                )}
               </div>
             </StepPanel>
           )}
@@ -250,7 +266,7 @@ export default function SubmitPage() {
             <div className="space-y-3">
               {/* Identity summary */}
               <div className="card flex items-center gap-3 p-4">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-clay-50 text-base font-semibold text-clay-600">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-paper-sunk text-sm font-semibold text-ink-800">
                   {(form.name.trim()[0] || "?").toUpperCase()}
                 </span>
                 <div className="min-w-0">
@@ -259,7 +275,7 @@ export default function SubmitPage() {
                     {[form.university, form.intake, form.consulate && `${form.consulate} embassy`].filter(Boolean).join(" · ")}
                   </p>
                 </div>
-                <span className="ml-auto hidden rounded-md bg-ochre-50 px-2 py-1 text-[11px] font-semibold text-ochre-700 sm:inline">Not submitted yet</span>
+                <span className="ml-auto hidden rounded-md border border-line bg-paper-raised px-2 py-1 text-[11px] font-medium text-mute sm:inline">Draft</span>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
@@ -283,7 +299,7 @@ export default function SubmitPage() {
                     const v = form[j.key];
                     return (
                       <li key={j.key} className="relative flex items-baseline justify-between gap-3">
-                        <span className={`absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full ring-4 ring-paper-raised ${v ? "bg-clay-500" : "bg-line-strong"}`} />
+                        <span className={`absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full ring-4 ring-paper ${v ? "bg-blue-600" : "bg-line-strong"}`} />
                         <span className={v ? "font-medium" : "text-mute"}>{j.label}</span>
                         <span className={v ? "tabular-nums" : "text-mute"}>{v ? fmtDate(v) : "Not yet"}</span>
                       </li>
@@ -328,7 +344,7 @@ export default function SubmitPage() {
                 <span className="text-xs tabular-nums text-mute">{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-sunk" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step + 1}>
-                <div className="h-full rounded-full bg-clay-500 transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+                <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
               </div>
             </div>
             <ol className="space-y-1">
@@ -354,9 +370,9 @@ export default function SubmitPage() {
           <div className="card p-4">
             <h2 className="mb-2 text-[14px] font-semibold">What happens next</h2>
             <ol className="space-y-2 text-[13px] text-ink-700">
-              <li className="flex gap-2"><span className="font-semibold text-clay-500">1</span> An admin checks your entry.</li>
-              <li className="flex gap-2"><span className="font-semibold text-clay-500">2</span> You get a Tracking ID and access code.</li>
-              <li className="flex gap-2"><span className="font-semibold text-clay-500">3</span> Log in any time to update your dates.</li>
+              <li className="flex gap-2"><span className="font-semibold text-blue-600">1</span> An admin checks your entry.</li>
+              <li className="flex gap-2"><span className="font-semibold text-blue-600">2</span> You get a Tracking ID and access code.</li>
+              <li className="flex gap-2"><span className="font-semibold text-blue-600">3</span> Log in any time to update your dates.</li>
             </ol>
           </div>
         </aside>
@@ -387,7 +403,7 @@ function ReviewCard({ title, onEdit, children }: { title: string; onEdit: () => 
     <section className="card p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-mute">{title}</h2>
-        <button type="button" onClick={onEdit} className="inline-flex min-h-[28px] items-center gap-1 rounded-md px-2 text-xs font-medium text-clay-600 hover:bg-clay-50">
+        <button type="button" onClick={onEdit} className="inline-flex min-h-[28px] items-center gap-1 rounded-md px-2 text-xs font-medium text-blue-600 hover:bg-paper-sunk">
           <Icon name="edit" size={12} /> Edit
         </button>
       </div>

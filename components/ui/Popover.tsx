@@ -50,7 +50,8 @@ export default function Popover({
     setSheet(isSheet);
     if (isSheet) return setPos(null);
     const r = a.getBoundingClientRect();
-    const w = Math.max(minWidth, width === "anchor" ? r.width : width);
+    const minW = Math.max(minWidth, 220);
+    const w = Math.min(window.innerWidth - 16, Math.max(minW, width === "anchor" ? r.width : width));
     const h = p?.scrollHeight ?? 0;
     const below = window.innerHeight - r.bottom - 12;
     const above = r.top - 12;

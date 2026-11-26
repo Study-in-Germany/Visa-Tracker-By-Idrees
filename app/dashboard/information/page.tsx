@@ -10,6 +10,7 @@ import DatePicker from "@/components/ui/DatePicker";
 import Checkbox from "@/components/ui/Checkbox";
 import { ErrorState, LoadingBlock, Notice } from "@/components/ui/States";
 import { apiFetch, jsonInit } from "@/lib/api";
+import { invalidateApi } from "@/hooks/useApi";
 import { toInputDate } from "@/lib/format";
 import { JOURNEY_STAGES } from "@/lib/constants";
 import { GENDER_OPTIONS, PROVINCE_OPTIONS, VISA_TYPE_OPTIONS } from "@/lib/options";
@@ -56,6 +57,10 @@ export default function MyInformationPage() {
     setSaveError("");
     try {
       await apiFetch("/api/applicant/me", jsonInit("PATCH", { ...form, gender: form.gender || null, isAnonymous }));
+      invalidateApi("/api/applicant/me");
+      invalidateApi("/api/queue-intelligence");
+      invalidateApi("/api/applicants");
+      invalidateApi("/api/stats");
       setSaved(true);
     } catch (err: any) {
       setSaveError(err.message);
@@ -108,7 +113,7 @@ export default function MyInformationPage() {
         </Panel>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button className="btn-gold" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
+          <button className="btn-primary" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
           {saved && <Notice tone="success">Saved.</Notice>}
           {saveError && <Notice tone="error">{saveError}</Notice>}
         </div>

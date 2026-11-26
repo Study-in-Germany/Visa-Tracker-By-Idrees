@@ -5,8 +5,8 @@ export default function StatusBadge({ status, short = false }: { status: string;
   const hex = VISA_STATUS_HEX[status] || VISA_STATUS_HEX.OTHER;
   const label = (short ? VISA_STATUS_SHORT[status] : VISA_STATUS_LABELS[status]) || status;
   return (
-    <span className={`badge !rounded-full !px-2 ${color}`}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: hex }} aria-hidden="true" />
+    <span className={`badge ${color}`}>
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: hex }} aria-hidden="true" />
       {label}
     </span>
   );

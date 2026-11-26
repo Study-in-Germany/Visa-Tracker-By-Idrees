@@ -5,6 +5,7 @@ import { apiError, forbidden, getActor, unauthorized } from "@/lib/permissions";
 import { universitySchema } from "@/lib/validations";
 import { pageMeta, parsePaging } from "@/lib/pagination";
 import { programmeWhere, toUniversityDto, uniqueSlug } from "@/lib/universities";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 const DEADLINE_WINDOWS: Record<string, number | "upcoming"> = { upcoming: "upcoming", "30": 30, "60": 60, "90": 90 };
 
@@ -75,5 +76,6 @@ export async function POST(req: NextRequest) {
     },
     include: { programmes: true },
   });
+  invalidateTags(CACHE_TAGS.UNIVERSITIES);
   return NextResponse.json({ university: toUniversityDto(university) }, { status: 201 });
 }

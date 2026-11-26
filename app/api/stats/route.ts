@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { waitingListWhere } from "@/lib/period";
 import { ACTIVE_STATUSES, CONSULATES } from "@/lib/constants";
+import { ELIGIBLE_PUBLIC_APPLICANT_WHERE } from "@/lib/analytics-filter";
 
 // GET /api/stats?from=&to=&consulate=
 // Lightweight headline numbers for the tracker: one grouped COUNT, no rows transferred.
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const groups = await prisma.applicant.groupBy({
     by: ["visaStatus"],
-    where: { approval: "APPROVED", ...(consulate ? { consulate } : {}), ...(waitingListDate ? { waitingListDate } : {}) },
+    where: { ...ELIGIBLE_PUBLIC_APPLICANT_WHERE, ...(consulate ? { consulate } : {}), ...(waitingListDate ? { waitingListDate } : {}) },
     _count: { _all: true },
   });
 

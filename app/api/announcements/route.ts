@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { announcementSchema } from "@/lib/validations";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 export async function GET() {
   const announcements = await prisma.announcement.findMany({
     orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
   });
-  return NextResponse.json({ announcements });
+  return NextResponse.json(
+    { announcements },
+    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -27,5 +31,6 @@ export async function POST(req: NextRequest) {
       pinned: !!data.pinned,
     },
   });
+  invalidateTags(CACHE_TAGS.ANNOUNCEMENTS);
   return NextResponse.json({ announcement }, { status: 201 });
 }

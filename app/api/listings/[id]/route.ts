@@ -4,6 +4,7 @@ import { apiError, canManageListing, forbidden, getActor, unauthorized, type Act
 import { listingActionSchema, listingUpdateSchema } from "@/lib/validations";
 import { deleteImageFiles, isPublic, listingDetailInclude, toDetail } from "@/lib/listings";
 import { parseCalendarDay } from "@/lib/period";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 const notFound = () => apiError("Listing not found.", 404);
 
@@ -44,6 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // RENTED is only reachable from APPROVED, so re-opening restores it without another review.
       await prisma.listing.update({ where: { id: existing.id }, data: { status: "APPROVED", rentedAt: null } });
     }
+    invalidateTags(CACHE_TAGS.LISTINGS);
     return NextResponse.json({ ok: true });
   }
 
@@ -82,6 +84,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   });
   await deleteImageFiles(removed);
+  invalidateTags(CACHE_TAGS.LISTINGS);
   return NextResponse.json({ ok: true });
 }
 
@@ -94,5 +97,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!canManageListing(actor, existing)) return forbidden();
   await deleteImageFiles(existing.images);
   await prisma.listing.delete({ where: { id: existing.id } });
+  invalidateTags(CACHE_TAGS.LISTINGS);
   return NextResponse.json({ ok: true });
 }

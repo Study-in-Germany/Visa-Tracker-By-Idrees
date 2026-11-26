@@ -22,7 +22,7 @@ export default function MetricCard({
     neutral: "bg-paper-sunk text-ink-700",
     good: "bg-emerald-50 text-emerald-700",
     bad: "bg-red-50 text-red-700",
-    warn: "bg-ochre-50 text-ochre-700",
+    warn: "bg-amber-50 text-amber-800",
   };
   return (
     <section className="card flex h-full flex-col p-4">

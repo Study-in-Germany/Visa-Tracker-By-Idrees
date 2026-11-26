@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { apiError, forbidden, getActor, unauthorized } from "@/lib/permissions";
 import { universitySchema } from "@/lib/validations";
 import { toUniversityDto, uniqueSlug } from "@/lib/universities";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 async function requireAdmin() {
   const actor = await getActor();
@@ -44,6 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     },
     include: { programmes: true },
   });
+  invalidateTags(CACHE_TAGS.UNIVERSITIES);
   return NextResponse.json({ university: toUniversityDto(university) });
 }
 
@@ -54,5 +56,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const existing = await prisma.university.findUnique({ where: { id: params.id }, select: { id: true } });
   if (!existing) return apiError("University not found.", 404);
   await prisma.university.delete({ where: { id: existing.id } });
+  invalidateTags(CACHE_TAGS.UNIVERSITIES);
   return NextResponse.json({ ok: true });
 }

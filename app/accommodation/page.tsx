@@ -76,7 +76,7 @@ function Browse() {
           <EmptyState
             title={savedMode ? "No saved places yet" : filtered ? "Nothing matches these filters" : "No places listed yet"}
             hint={savedMode ? "Tap the heart on a listing to keep it here." : filtered ? "Try a wider price range or another category." : "Be the first to post a room, or tell people what you're looking for."}
-            action={savedMode ? <button type="button" className="btn-secondary mt-1" onClick={() => set({ saved: "" })}>Browse all</button> : filtered ? <button type="button" className="btn-secondary mt-1" onClick={reset}>Clear filters</button> : <Link href="/accommodation/new" className="btn-gold mt-1">Post a place</Link>}
+            action={savedMode ? <button type="button" className="btn-secondary mt-1" onClick={() => set({ saved: "" })}>Browse all</button> : filtered ? <button type="button" className="btn-secondary mt-1" onClick={reset}>Clear filters</button> : <Link href="/accommodation/new" className="btn-primary mt-1">Post a place</Link>}
           />
         </div>
       ) : (

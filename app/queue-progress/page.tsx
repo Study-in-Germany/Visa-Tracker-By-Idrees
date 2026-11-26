@@ -36,14 +36,14 @@ function QueueInner() {
       ) : (
         <div className={`space-y-4 transition-opacity ${loading && data ? "opacity-60" : ""}`}>
           <section className="grid gap-3 sm:grid-cols-3">
-            <StatCard variant="wide" format="days" icon="hourglass" tone="warn" label="Waiting list → invitation" value={data?.processing.avgWaitingToSubmission} loading={first} />
-            <StatCard variant="wide" format="days" icon="send" tone="sage" label="Documents → appointment" value={data?.processing.avgSubmissionToAppointment} loading={first} />
-            <StatCard variant="wide" format="days" icon="calendar" tone="good" label="Appointment → decision" value={data?.processing.avgAppointmentToDecision} loading={first} />
+            <StatCard variant="wide" format="days" icon="hourglass" tone="warn" label="Waiting list → invitation" value={data?.processing.avgWaitingToSubmission} hint={data?.processing.sampleSizes ? `Sample: n = ${data.processing.sampleSizes.waitingToSubmission}` : undefined} loading={first} />
+            <StatCard variant="wide" format="days" icon="send" tone="sage" label="Documents → appointment" value={data?.processing.avgSubmissionToAppointment} hint={data?.processing.sampleSizes ? `Sample: n = ${data.processing.sampleSizes.submissionToAppointment}` : undefined} loading={first} />
+            <StatCard variant="wide" format="days" icon="calendar" tone="good" label="Appointment → decision" value={data?.processing.avgAppointmentToDecision} hint={data?.processing.sampleSizes ? `Sample: n = ${data.processing.sampleSizes.appointmentToDecision}` : undefined} loading={first} />
           </section>
 
           <Panel title="New waiting-list joins" description="Applicants per month">
             {data && data.monthlyVolume.length > 0 ? (
-              <MonthlyBars data={data.monthlyVolume} series={[{ key: "count", label: "Applicants", color: "#4a6350" }]} height={300} />
+              <MonthlyBars data={data.monthlyVolume} series={[{ key: "count", label: "Applicants", color: "#2563EB" }]} height={300} />
             ) : first ? (
               <LoadingBlock rows={1} />
             ) : (

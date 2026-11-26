@@ -62,7 +62,7 @@ export function InstallBanner() {
           <p className="truncate text-[14px] font-semibold">Install Visa Tracker</p>
           <p className="truncate text-xs text-mute">Open it from your home screen, like an app.</p>
         </div>
-        <button type="button" onClick={() => (canPrompt ? install().then(dismiss) : setHelp(true))} className="btn-gold !min-h-[40px] shrink-0 !px-4">Install</button>
+        <button type="button" onClick={() => (canPrompt ? install().then(dismiss) : setHelp(true))} className="btn-primary !min-h-[40px] shrink-0 !px-4">Install</button>
         <button type="button" onClick={dismiss} aria-label="Not now" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-mute hover:bg-paper-sunk"><Icon name="close" size={16} /></button>
       </div>
       <Modal open={help} onClose={() => setHelp(false)} title="Install Visa Tracker" size="sm" footer={<button type="button" className="btn-primary" onClick={() => { setHelp(false); dismiss(); }}>Got it</button>}>

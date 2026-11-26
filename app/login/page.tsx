@@ -60,7 +60,7 @@ export default function LoginPage() {
           <PasswordInput id="accessCode" value={accessCode} onChange={setAccessCode} autoComplete="current-password" placeholder="XXXX-XXXX" required />
         </Field>
         {error && <Notice tone="error">{error}</Notice>}
-        <button className="btn-gold !min-h-[40px] w-full" disabled={loading || !publicId.trim() || !accessCode.trim()}>
+        <button className="btn-primary !min-h-[40px] w-full" disabled={loading || !publicId.trim() || !accessCode.trim()}>
           {loading ? "Signing in…" : "Sign in"}
         </button>
       </form>

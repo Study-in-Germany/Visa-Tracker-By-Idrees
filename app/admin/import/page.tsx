@@ -70,7 +70,7 @@ export default function AdminImportPage() {
               <form onSubmit={handleUpload} className="mt-2.5 space-y-3">
                 <FileDrop accept=".csv" file={file} onFile={(f) => { setFile(f); setError(""); }} label="Choose CSV file" />
                 {error && <Notice tone="error">{error}</Notice>}
-                <button className="btn-gold w-full sm:w-auto" disabled={uploading || !file}>{uploading ? "Importing…" : "Import applicants"}</button>
+                <button className="btn-primary w-full sm:w-auto" disabled={uploading || !file}>{uploading ? "Importing…" : "Import applicants"}</button>
               </form>
             </Step>
           </ol>

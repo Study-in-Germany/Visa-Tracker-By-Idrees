@@ -136,7 +136,7 @@ export default function Calendar(props: (SingleProps | RangeProps) & { min?: str
                         : outside
                         ? "text-ink-300 hover:bg-paper-sunk"
                         : "hover:bg-paper-sunk"
-                    } ${s === todayStr && !edge ? "font-semibold text-clay-600 ring-1 ring-clay-400/60" : ""}`}
+                    } ${s === todayStr && !edge ? "font-semibold text-blue-600 ring-1 ring-blue-500/60" : ""}`}
                   >
                     {d.getDate()}
                   </button>

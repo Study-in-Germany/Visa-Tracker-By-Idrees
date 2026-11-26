@@ -30,14 +30,14 @@ export function formatStat(value: number | null | undefined, format: StatFormat 
   return Math.round(value).toLocaleString("en-US");
 }
 
-// solid icon tile + top accent per tone, aligned with the status palette
+// Neutral/semantic icon tile + top accent per tone, aligned with the new neutral design system.
 const TONES: Record<StatTone, { tile: string; dot: string; bar: string }> = {
-  neutral: { tile: "bg-slate-100 text-slate-700", dot: "bg-slate-400", bar: "bg-slate-300" },
-  sage: { tile: "bg-ink-100 text-ink-700", dot: "bg-ink-600", bar: "bg-ink-600" },
-  good: { tile: "bg-green-100 text-green-700", dot: "bg-green-500", bar: "bg-green-500" },
-  bad: { tile: "bg-red-100 text-red-700", dot: "bg-red-500", bar: "bg-red-500" },
-  warn: { tile: "bg-amber-100 text-amber-700", dot: "bg-amber-500", bar: "bg-amber-500" },
-  accent: { tile: "bg-clay-100 text-clay-600", dot: "bg-clay-500", bar: "bg-clay-500" },
+  neutral: { tile: "bg-paper-sunk text-ink-700", dot: "bg-zinc-400", bar: "bg-zinc-300 dark:bg-zinc-700" },
+  sage: { tile: "bg-paper-sunk text-ink-800", dot: "bg-ink-800", bar: "bg-ink-800" },
+  good: { tile: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500", bar: "bg-emerald-500" },
+  bad: { tile: "bg-red-50 text-red-700", dot: "bg-red-500", bar: "bg-red-500" },
+  warn: { tile: "bg-amber-50 text-amber-700", dot: "bg-amber-500", bar: "bg-amber-500" },
+  accent: { tile: "bg-blue-50 text-blue-700", dot: "bg-blue-600", bar: "bg-blue-600" },
 };
 
 function Trend({ trend }: { trend: NonNullable<StatCardProps["trend"]> }) {
@@ -66,7 +66,7 @@ export default function StatCard({ label, value, format = "number", icon, tone =
   );
   const dot = <span className={`h-2 w-2 shrink-0 rounded-full ${t.dot}`} aria-hidden="true" />;
 
-  const cls = `card relative block h-full overflow-hidden p-3.5 ${wide ? "min-h-[68px]" : "min-h-[104px]"}${href ? "transition-shadow hover:shadow-md" : ""}`;
+  const cls = `card relative block h-full overflow-hidden p-3.5 ${wide ? "min-h-[68px]" : "min-h-[104px]"}${href ? " transition-colors hover:bg-paper-raised" : ""}`;
 
   const bar = <span className={`absolute inset-x-0 top-0 h-[3px] ${t.bar}`} aria-hidden="true" />;
 
@@ -81,7 +81,7 @@ export default function StatCard({ label, value, format = "number", icon, tone =
       {tile}
       <div className="min-w-0 flex-1">
         <div className="text-[11px] font-medium uppercase tracking-wider text-mute">{label}</div>
-        <div className="mt-0.5 text-2xl font-bold leading-tight tracking-tight">
+        <div className="mt-0.5 text-2xl font-bold leading-tight tracking-tight tabular-nums">
           {figure}
           {suffix}
         </div>
@@ -100,7 +100,7 @@ export default function StatCard({ label, value, format = "number", icon, tone =
         {tile}
         {dot}
       </div>
-      <div className="mt-3 text-2xl font-bold leading-none tracking-tight">
+      <div className="mt-3 text-2xl font-bold leading-none tracking-tight tabular-nums">
         {figure}
         {suffix}
       </div>

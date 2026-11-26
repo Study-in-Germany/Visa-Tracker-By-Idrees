@@ -23,7 +23,7 @@ const TOOLS: Item[] = [
 function Card({ r }: { r: Item }) {
   const inner = (
     <>
-      <span className="grid h-11 w-11 place-items-center rounded-xl bg-clay-50 text-clay-500 transition-transform group-hover:scale-105"><Icon name={r.icon} size={20} /></span>
+      <span className="grid h-11 w-11 place-items-center rounded-xl bg-blue-50 text-blue-500 transition-transform group-hover:scale-105"><Icon name={r.icon} size={20} /></span>
       <h3 className="mt-4 text-[15px] font-semibold">{r.title}</h3>
       <p className="mt-1.5 flex-1 text-[13px] leading-relaxed text-mute">{r.body}</p>
       <span className="mt-4 inline-flex min-h-[32px] items-center gap-1.5 text-[13px] font-semibold text-ink-900">

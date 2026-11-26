@@ -29,7 +29,7 @@ function RequestCard({ l, href, footer }: { l: ListingCardDto; href?: string; fo
           </span>
         </div>
         <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug">
-          <Link href={href ?? `/accommodation/${l.id}`} className="after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-clay-500">{l.title}</Link>
+          <Link href={href ?? `/accommodation/${l.id}`} className="after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-blue-500">{l.title}</Link>
         </h3>
         {l.excerpt && <p className="line-clamp-2 text-[13px] leading-relaxed text-mute">{l.excerpt}</p>}
         <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">

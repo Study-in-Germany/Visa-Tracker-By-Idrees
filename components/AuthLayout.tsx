@@ -30,7 +30,7 @@ export default function AuthLayout({
   return (
     <div className="grid min-h-screen bg-paper lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       {/* Brand panel */}
-      <aside className="relative hidden overflow-hidden bg-ink-900 text-paper-raised lg:flex lg:flex-col">
+      <aside className="relative hidden overflow-hidden bg-zinc-950 text-zinc-100 lg:flex lg:flex-col">
         {/* flag stripe from the seal */}
         <div className="flex h-1.5" aria-hidden="true">
           <span className="flex-1 bg-black" />
@@ -98,7 +98,7 @@ export default function AuthLayout({
 
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-[400px]">
-            <div className="card p-5 shadow-[0_8px_30px_-12px_rgba(35,47,39,0.18)] sm:p-6">
+            <div className="card p-5 sm:p-6">
               <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
               <p className="mt-1 text-[13px] text-mute">{subtitle}</p>
               <div className="mt-4">{children}</div>

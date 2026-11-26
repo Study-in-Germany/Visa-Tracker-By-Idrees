@@ -48,15 +48,11 @@ type Props<T> = {
   rowAccent?: (row: T) => string | undefined;
 };
 
-const wash = (hex?: string): React.CSSProperties | undefined =>
-  hex ? { backgroundImage: `linear-gradient(90deg, ${hex}26 0%, ${hex}0d 45%, transparent 80%)` } : undefined;
-const rail = (hex?: string): React.CSSProperties | undefined => (hex ? { boxShadow: `inset 4px 0 0 ${hex}` } : undefined);
-
 const HIDE = { lg: "hidden lg:table-cell", xl: "hidden xl:table-cell" } as const;
 
 export default function DataTable<T>({
   columns, rows, rowKey, loading, error, onRetry, emptyTitle = "Nothing here yet", emptyHint,
-  sort, onSort, page = 1, pageCount = 1, total, onPage, actions, caption, embedded, rowHref, rowAccent,
+  sort, onSort, page = 1, pageCount = 1, total, onPage, actions, caption, embedded, rowHref,
 }: Props<T>) {
   const router = useRouter();
   const openRow = (e: React.MouseEvent, row: T) => {
@@ -87,7 +83,7 @@ export default function DataTable<T>({
       <div className={`${embedded ? "" : "card"} hidden overflow-x-auto md:block`}>
         <table className="w-full text-sm">
           <caption className="sr-only">{caption}</caption>
-          <thead className={`border-b border-line bg-paper-sunk/60 text-left text-[11px] uppercase tracking-wider text-mute ${embedded ? "border-t" : ""}`}>
+          <thead className={`border-b border-line bg-paper-raised text-left text-[11px] uppercase tracking-wider text-mute ${embedded ? "border-t" : ""}`}>
             <tr>
               {columns.map((c) => {
                 const sorted = !!sort && !!c.sortKey && sort.key === c.sortKey;
@@ -96,7 +92,7 @@ export default function DataTable<T>({
                     key={c.key}
                     scope="col"
                     aria-sort={sorted ? (sort?.dir === "asc" ? "ascending" : "descending") : undefined}
-                    className={`px-3 py-2 font-semibold ${c.align === "right" ? "text-right" : ""} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}
+                    className={`px-3 py-2.5 font-medium ${c.align === "right" ? "text-right" : ""} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}
                   >
                     <div className={`flex items-center gap-0.5 ${c.align === "right" ? "justify-end" : ""}`}>
                       {c.sortKey && onSort ? (
@@ -112,18 +108,18 @@ export default function DataTable<T>({
                   </th>
                 );
               })}
-              {actions && <th scope="col" className="px-3 py-2 text-right font-semibold">Actions</th>}
+              {actions && <th scope="col" className="px-3 py-2.5 text-right font-medium">Actions</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-line">
+          <tbody className="divide-y divide-line bg-card">
             {rows.map((row) => (
-              <tr key={rowKey(row)} onClick={(e) => openRow(e, row)} style={wash(rowAccent?.(row))} className={`hover:brightness-95 ${rowHref ? "cursor-pointer" : ""}`}>
-                {columns.map((c, ci) => (
-                  <td key={c.key} style={ci === 0 ? rail(rowAccent?.(row)) : undefined} className={`px-3 py-2 align-middle ${c.align === "right" ? "text-right" : ""} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}>
+              <tr key={rowKey(row)} onClick={(e) => openRow(e, row)} className={`hover:bg-paper-sunk/70 transition-colors ${rowHref ? "cursor-pointer" : ""}`}>
+                {columns.map((c) => (
+                  <td key={c.key} className={`px-3 py-2.5 align-middle ${c.align === "right" ? "text-right" : ""} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}>
                     {c.cell(row)}
                   </td>
                 ))}
-                {actions && <td className="whitespace-nowrap px-3 py-1.5 text-right">{actions(row)}</td>}
+                {actions && <td className="whitespace-nowrap px-3 py-2 text-right">{actions(row)}</td>}
               </tr>
             ))}
           </tbody>

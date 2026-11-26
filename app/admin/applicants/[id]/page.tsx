@@ -13,6 +13,7 @@ import Icon from "@/components/ui/Icon";
 import { ErrorState, LoadingBlock, Notice } from "@/components/ui/States";
 import StatusBadge from "@/components/StatusBadge";
 import { apiFetch, jsonInit } from "@/lib/api";
+import { invalidateApi } from "@/hooks/useApi";
 import { fmtDate, toInputDate } from "@/lib/format";
 import { JOURNEY_STAGES } from "@/lib/constants";
 import { APPROVAL_OPTIONS, CONSULATE_FIELD_OPTIONS, GENDER_OPTIONS, PROVINCE_OPTIONS, VISA_STATUS_OPTIONS, VISA_TYPE_OPTIONS } from "@/lib/options";
@@ -62,6 +63,9 @@ export default function AdminApplicantEditPage() {
     setError("");
     try {
       await apiFetch(`/api/applicants/${id}`, jsonInit("PATCH", { ...form, gender: form.gender || null, statusNote: statusNote || undefined }));
+      invalidateApi("/api/applicants");
+      invalidateApi("/api/stats");
+      invalidateApi("/api/admin/overview");
       setSaved(true);
       setStatusNote("");
       load();
@@ -76,6 +80,9 @@ export default function AdminApplicantEditPage() {
     if (!confirm("Delete this applicant record permanently? This cannot be undone.")) return;
     try {
       await apiFetch(`/api/applicants/${id}`, { method: "DELETE" });
+      invalidateApi("/api/applicants");
+      invalidateApi("/api/stats");
+      invalidateApi("/api/admin/overview");
       router.push("/admin/applicants");
     } catch (err: any) {
       setError(err.message);
@@ -149,7 +156,7 @@ export default function AdminApplicantEditPage() {
         </Panel>
 
         <div className="sticky bottom-0 z-10 -mx-3 flex flex-wrap items-center gap-3 border-t border-line bg-paper/95 px-3 py-3 backdrop-blur sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6">
-          <button className="btn-gold" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
+          <button className="btn-primary" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
           {saved && <Notice tone="success">Saved.</Notice>}
           {error && <Notice tone="error">{error}</Notice>}
           <button type="button" onClick={handleDelete} className="ml-auto text-xs font-medium text-red-700 hover:underline">Delete record</button>

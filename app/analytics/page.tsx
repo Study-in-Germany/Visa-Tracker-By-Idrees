@@ -38,9 +38,9 @@ function AnalyticsInner() {
   const withdrawn = data?.statusCounts.WITHDRAWN ?? 0;
   const decided = data ? data.visaIssued + data.visaRejected : 0;
   const stages = [
-    { label: "Waiting list → invitation", v: data?.processing.avgWaitingToSubmission ?? null },
-    { label: "Documents → appointment", v: data?.processing.avgSubmissionToAppointment ?? null },
-    { label: "Appointment → decision", v: data?.processing.avgAppointmentToDecision ?? null },
+    { label: "Waiting list → invitation", v: data?.processing.avgWaitingToSubmission ?? null, n: data?.processing.sampleSizes?.waitingToSubmission },
+    { label: "Documents → appointment", v: data?.processing.avgSubmissionToAppointment ?? null, n: data?.processing.sampleSizes?.submissionToAppointment },
+    { label: "Appointment → decision", v: data?.processing.avgAppointmentToDecision ?? null, n: data?.processing.sampleSizes?.appointmentToDecision },
   ];
   const endToEnd = stages.every((s) => s.v !== null) ? stages.reduce((sum, s) => sum + (s.v as number), 0) : null;
   const statusRows = data ? VISA_STATUS_ORDER.filter((k) => (data.statusCounts[k] ?? 0) > 0).map((k) => ({ k, n: data.statusCounts[k] })) : [];
@@ -64,7 +64,7 @@ function AnalyticsInner() {
           {/* 1 — volume */}
           <MetricCard title="Applicants" value={total.toLocaleString("en-US")} pill={data ? `${data.activeApplicants} active` : undefined} action={{ label: "View entries", href: trackerHref }} loading={first}>
             {data && data.monthlyVolume.length > 0 ? (
-              <MonthlyArea data={data.monthlyVolume} series={[{ key: "count", label: "Joined", color: "#b5532f" }]} />
+              <MonthlyArea data={data.monthlyVolume} series={[{ key: "count", label: "Joined", color: "#2563EB" }]} />
             ) : (
               <EmptyState title="No waiting-list dates yet" />
             )}
@@ -87,7 +87,7 @@ function AnalyticsInner() {
               {[
                 { label: "Issued", n: data?.visaIssued ?? 0, color: "bg-emerald-500" },
                 { label: "Rejected", n: data?.visaRejected ?? 0, color: "bg-red-500" },
-                { label: "Withdrawn", n: withdrawn, color: "bg-ochre-500" },
+                { label: "Withdrawn", n: withdrawn, color: "bg-zinc-400" },
               ].map((c) => (
                 <div key={c.label} className="flex flex-col">
                   <span className="text-xs text-mute">{c.label}</span>
@@ -106,9 +106,12 @@ function AnalyticsInner() {
           <MetricCard title="Typical total wait" value={formatDuration(endToEnd)} pill="sum of stage averages" loading={first}>
             <ul className="space-y-2 border-t border-line pt-3 text-sm">
               {stages.map((s) => (
-                <li key={s.label} className="flex items-center justify-between">
-                  <span>{s.label}</span>
-                  <span className="font-medium tabular-nums">{dayText(s.v)}</span>
+                <li key={s.label} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{s.label}</span>
+                  <span className="shrink-0 font-medium tabular-nums">
+                    {dayText(s.v)}
+                    {typeof s.n === "number" && <span className="ml-1.5 text-[11px] font-normal text-mute">(n={s.n})</span>}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -117,8 +120,8 @@ function AnalyticsInner() {
                 <MonthlyArea
                   data={data.monthlyOutcomes}
                   series={[
-                    { key: "issued", label: "Issued", color: "#2f7d57" },
-                    { key: "rejected", label: "Rejected", color: "#b3372f" },
+                    { key: "issued", label: "Issued", color: "#16A34A" },
+                    { key: "rejected", label: "Rejected", color: "#DC2626" },
                   ]}
                   height={120}
                 />

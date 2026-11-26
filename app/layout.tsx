@@ -4,7 +4,6 @@ import "./globals.css";
 import { SITE_NAME } from "@/lib/constants";
 import AppShell from "@/components/AppShell";
 import RegisterSW from "@/components/RegisterSW";
-import Splash from "@/components/Splash";
 import { THEME_INIT_SCRIPT } from "@/hooks/useTheme";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -24,8 +23,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#efeee9" },
-    { media: "(prefers-color-scheme: dark)", color: "#111412" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
   ],
 };
 
@@ -37,7 +36,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans">
         <AppShell>{children}</AppShell>
-        <Splash />
         <RegisterSW />
       </body>
     </html>

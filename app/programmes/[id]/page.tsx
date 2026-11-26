@@ -40,7 +40,7 @@ const text = (v: string | null | undefined) => (v ? v : <Missing />);
 
 function ExternalLink({ href, children }: { href: string | null; children: React.ReactNode }) {
   if (!href) return <Missing />;
-  return <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-medium underline underline-offset-2 hover:text-clay-600">{children} <Icon name="external" size={12} /></a>;
+  return <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-medium underline underline-offset-2 hover:text-blue-600">{children} <Icon name="external" size={12} /></a>;
 }
 
 function LinkHealth({ status }: { status: number | null }) {
@@ -114,7 +114,7 @@ export default function ProgrammePage({ params }: { params: { id: string } }) {
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             <BookmarkButton id={p.id} label />
             <CompareToggle id={p.id} label />
-            {p.applicationUrl && <a href={p.applicationUrl} target="_blank" rel="noopener noreferrer" className="btn-gold !min-h-[40px]">Apply <Icon name="external" size={13} /></a>}
+            {p.applicationUrl && <a href={p.applicationUrl} target="_blank" rel="noopener noreferrer" className="btn-primary !min-h-[40px]">Apply <Icon name="external" size={13} /></a>}
           </div>
         </div>
       </section>

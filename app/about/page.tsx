@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
+import { CACHE_TAGS } from "@/lib/cache";
 import { ACTIVE_STATUSES, COMMUNITY_LINKS, SITE_NAME } from "@/lib/constants";
 import PageHeader from "@/components/ui/PageHeader";
 import Panel from "@/components/ui/Panel";
@@ -7,10 +9,10 @@ import StatCard from "@/components/ui/StatCard";
 import Icon, { IconName } from "@/components/ui/Icon";
 import { LogoMark } from "@/components/Logo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
-async function getStats() {
-  try {
+const getAboutStats = unstable_cache(
+  async () => {
     const approved = { approval: "APPROVED" as const };
     const [total, active, issued, universities] = await Promise.all([
       prisma.applicant.count({ where: approved }),
@@ -19,6 +21,14 @@ async function getStats() {
       prisma.applicant.findMany({ where: { ...approved, university: { not: null } }, distinct: ["university"], select: { university: true } }),
     ]);
     return { total, active, issued, universities: universities.length };
+  },
+  ["about-stats-v1"],
+  { revalidate: 60, tags: [CACHE_TAGS.APPLICANTS] },
+);
+
+async function getStats() {
+  try {
+    return await getAboutStats();
   } catch (e) {
     console.error("[about] stats query failed", e);
     return null;
@@ -26,10 +36,10 @@ async function getStats() {
 }
 
 const STEPS: { icon: IconName; title: string; body: string }[] = [
-  { icon: "send", title: "Applicants share", body: "Students add their own dates: waiting list, invitation, documents, appointment, decision." },
-  { icon: "shield", title: "Admins review", body: "Every entry is checked before it is visible. Nothing goes public automatically." },
-  { icon: "chart", title: "Patterns appear", body: "Approved entries become queue movement, stage durations and embassy comparisons." },
-  { icon: "clock", title: "You plan ahead", body: "Use the numbers and your own estimate to judge how long your next step may take." },
+  { icon: "send", title: "Applicants share", body: "Students submit waiting list, invitation, submission, appointment, and decision dates." },
+  { icon: "shield", title: "Admins review", body: "Every entry is checked before publication. Nothing goes public automatically." },
+  { icon: "chart", title: "Patterns appear", body: "Approved entries power queue frontiers, stage durations, and embassy comparisons." },
+  { icon: "clock", title: "Track progress", body: "Compare timelines and estimate expected waiting windows using observed history." },
 ];
 
 const PUBLIC_ITEMS = ["Tracking ID", "University and program", "Embassy and intake", "Journey dates and status"];
@@ -42,20 +52,19 @@ export default async function AboutPage() {
     <>
       <PageHeader title={`About ${SITE_NAME}`} description="A community-run tracker for the German national student visa in Pakistan." />
 
-      {/* Mission */}
-      <section className="card mb-3 flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-        <LogoMark size={56} className="shrink-0" />
+      <section className="card mb-4 flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+        <LogoMark size={48} className="shrink-0" />
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold leading-snug">Real timelines from real applicants, instead of rumours.</h2>
-          <p className="mt-1 max-w-3xl text-[13px] text-ink-700">
-            Waiting for a visa appointment is mostly guesswork. {SITE_NAME} puts applicant-reported journeys side by side so everyone can see how long each stage is actually taking, at each embassy, right now.
+          <h2 className="text-[15px] font-semibold leading-snug text-ink-900">Community-reported timelines, structured for clarity.</h2>
+          <p className="mt-1 max-w-3xl text-[13px] text-ink-600">
+            {SITE_NAME} aggregates verified applicant-submitted journeys so students can inspect current embassy queue movement and stage durations.
           </p>
         </div>
-        <Link href="/analytics" className="btn-primary shrink-0 sm:ml-auto">See the numbers</Link>
+        <Link href="/analytics" className="btn-primary shrink-0 sm:ml-auto">View analytics</Link>
       </section>
 
       {stats && (
-        <section aria-label="Community numbers" className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <section aria-label="Community numbers" className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard icon="users" tone="sage" label="Journeys shared" value={stats.total} />
           <StatCard icon="hourglass" tone="warn" label="Still waiting" value={stats.active} />
           <StatCard icon="checkCircle" tone="good" label="Visas issued" value={stats.issued} />
@@ -63,31 +72,29 @@ export default async function AboutPage() {
         </section>
       )}
 
-      {/* How it works */}
-      <Panel title="How it works" className="mb-3">
+      <Panel title="How it works" className="mb-4">
         <ol className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {STEPS.map((s, i) => (
             <li key={s.title} className="relative flex gap-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-clay-50 text-clay-500">
-                <Icon name={s.icon} size={17} />
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-paper-sunk text-ink-700">
+                <Icon name={s.icon} size={16} />
               </span>
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-mute">Step {i + 1}</p>
-                <h3 className="text-sm font-semibold">{s.title}</h3>
-                <p className="mt-0.5 text-[13px] text-mute">{s.body}</p>
+                <h3 className="text-[13px] font-semibold text-ink-900">{s.title}</h3>
+                <p className="mt-0.5 text-[12.5px] text-mute">{s.body}</p>
               </div>
             </li>
           ))}
         </ol>
       </Panel>
 
-      {/* Privacy */}
-      <div className="mb-3 grid gap-3 md:grid-cols-2">
+      <div className="mb-4 grid gap-4 md:grid-cols-2">
         <Panel title="Visible on the public tracker">
           <ul className="space-y-2">
             {PUBLIC_ITEMS.map((t) => (
               <li key={t} className="flex items-center gap-2.5 text-[13px]">
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700"><Icon name="check" size={12} strokeWidth={3} /></span>
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-emerald-50 text-emerald-700"><Icon name="check" size={12} strokeWidth={3} /></span>
                 {t}
               </li>
             ))}
@@ -97,7 +104,7 @@ export default async function AboutPage() {
           <ul className="space-y-2">
             {PRIVATE_ITEMS.map((t) => (
               <li key={t} className="flex items-center gap-2.5 text-[13px]">
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-paper-sunk text-ink-700"><Icon name="shield" size={12} /></span>
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-paper-sunk text-ink-700"><Icon name="shield" size={12} /></span>
                 {t}
               </li>
             ))}
@@ -105,19 +112,18 @@ export default async function AboutPage() {
         </Panel>
       </div>
 
-      {/* Join + disclaimer */}
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <Panel title="Be part of it">
-          <p className="text-[13px] text-ink-700">The more journeys are shared, the more accurate the estimates get. Adding yours takes about two minutes.</p>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title="Contribute">
+          <p className="text-[13px] text-ink-700">Sharing your dates improves queue visibility and waiting-time estimates for everyone.</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link href="/submit" className="btn-gold"><Icon name="plus" size={14} /> Submit your journey</Link>
+            <Link href="/submit" className="btn-primary"><Icon name="plus" size={14} /> Submit entry</Link>
             <a href={COMMUNITY_LINKS.whatsappCommunity} target="_blank" rel="noopener noreferrer" className="btn-secondary">
               WhatsApp community <Icon name="external" size={12} />
             </a>
           </div>
         </Panel>
-        <section className="card border-ochre-500/30 bg-ochre-50/60 p-4">
-          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ochre-700">
+        <section className="card border-line bg-paper-raised p-4">
+          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink-700">
             <Icon name="alert" size={13} /> Disclaimer
           </h2>
           <p className="mt-2 text-[13px] text-ink-700">

@@ -16,7 +16,7 @@ export function BookmarkButton({ id, label = false }: { id: string; label?: bool
       onClick={(e) => { e.stopPropagation(); toggle(id); }}
       className={label ? "btn-secondary !min-h-[40px] gap-1.5" : "grid h-9 w-9 place-items-center rounded-full text-ink-700 hover:bg-paper-sunk"}
     >
-      <svg width="17" height="17" viewBox="0 0 24 24" fill={on ? "rgb(var(--clay-500))" : "none"} stroke={on ? "rgb(var(--clay-500))" : "currentColor"} strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill={on ? "rgb(var(--accent-500))" : "none"} stroke={on ? "rgb(var(--accent-500))" : "currentColor"} strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 21s-7.5-4.6-9.5-9.2C1.2 8.6 3 5 6.5 5c2 0 3.5 1.1 5.5 3.2C14 6.1 15.5 5 17.5 5 21 5 22.8 8.6 21.5 11.8 19.5 16.4 12 21 12 21z" />
       </svg>
       {label && <span>{on ? "Bookmarked" : "Bookmark"}</span>}

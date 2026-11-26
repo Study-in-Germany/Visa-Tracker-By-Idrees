@@ -6,6 +6,7 @@ import { listingSchema } from "@/lib/validations";
 import { getTeamOwnerId, listingCardSelect, toCard } from "@/lib/listings";
 import { pageMeta, parsePaging } from "@/lib/pagination";
 import { parseCalendarDay } from "@/lib/period";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 
 const TYPES = ["ROOM", "SHARED_ROOM", "STUDIO", "APARTMENT"];
 const STATUSES = ["PENDING_REVIEW", "APPROVED", "REJECTED", "RENTED"];
@@ -96,7 +97,14 @@ export async function GET(req: NextRequest) {
     : [];
   const openByListing = new Map(reportCounts.map((g) => [g.listingId, g._count._all]));
   const items = rows.map((r) => (isAdminScope ? { ...toCard(r), openReports: openByListing.get(r.id) ?? 0 } : toCard(r)));
-  return NextResponse.json({ items, ...pageMeta(count, page, pageSize), ...(cities ? { cities: cities.map((c) => c.city) } : {}) });
+  return NextResponse.json(
+    { items, ...pageMeta(count, page, pageSize), ...(cities ? { cities: cities.map((c) => c.city) } : {}) },
+    {
+      headers: scope === "public"
+        ? { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" }
+        : { "Cache-Control": "private, no-store" },
+    },
+  );
 }
 
 // POST /api/listings — publish a listing (applicants only). It is live straight away.
@@ -138,5 +146,6 @@ export async function POST(req: NextRequest) {
     await Promise.all(imageIds.map((id, position) => tx.listingImage.update({ where: { id }, data: { listingId: created.id, position } })));
     return created;
   });
+  invalidateTags(CACHE_TAGS.LISTINGS);
   return NextResponse.json({ id: listing.id }, { status: 201 });
 }

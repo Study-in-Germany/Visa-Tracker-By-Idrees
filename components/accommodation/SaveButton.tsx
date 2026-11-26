@@ -7,7 +7,7 @@ export default function SaveButton({ id, overlay = false, link = false }: { id: 
   const { isSaved, toggle } = useSaved();
   const saved = isSaved(id);
   const heart = (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill={saved ? "rgb(var(--clay-500))" : "none"} stroke={saved ? "rgb(var(--clay-500))" : "currentColor"} strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill={saved ? "rgb(var(--accent-500))" : "none"} stroke={saved ? "rgb(var(--accent-500))" : "currentColor"} strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 21s-7.5-4.6-9.5-9.2C1.2 8.6 3 5 6.5 5c2 0 3.5 1.1 5.5 3.2C14 6.1 15.5 5 17.5 5 21 5 22.8 8.6 21.5 11.8 19.5 16.4 12 21 12 21z" />
     </svg>
   );

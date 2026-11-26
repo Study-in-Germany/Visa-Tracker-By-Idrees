@@ -201,7 +201,7 @@ export default function ListingForm({ listing, admin = false }: { listing?: List
           <h2 className="text-[14px] font-semibold">{editing ? "Save your changes" : "Ready to publish?"}</h2>
           <p className="text-xs text-mute">{editing ? "Changes show immediately." : admin ? "It goes live straight away under the Visa Tracker team. You can edit or remove it any time from this list." : "Your post goes live straight away. You can edit, hide or delete it any time from My listings."}</p>
           {formError && <Notice tone="error">{formError}</Notice>}
-          <button type="submit" className="btn-gold !min-h-[44px] w-full" disabled={busy}>{busy ? "Publishing…" : editing ? "Save changes" : "Publish"}</button>
+          <button type="submit" className="btn-primary !min-h-[44px] w-full" disabled={busy}>{busy ? "Publishing…" : editing ? "Save changes" : "Publish"}</button>
           <button type="button" className="btn-secondary w-full" onClick={() => router.back()} disabled={busy}>Cancel</button>
         </div>
         <ul className="space-y-1.5 px-1 text-xs text-mute">

@@ -94,7 +94,7 @@ export default function ProgrammeFormModal({ open, onClose, universityId, progra
               {input("durationSemesters", "Duration (semesters)", { inputMode: "numeric", placeholder: "4", error: errors.durationSemesters })}
             </div>
             <fieldset>
-              <legend className="label">Intakes <span className="text-clay-500">*</span></legend>
+              <legend className="label">Intakes <span className="text-blue-500">*</span></legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 <Toggle checked={f.intakes.includes("WINTER")} onChange={(v) => toggleIntake("WINTER", v)} label="Winter intake" />
                 <Toggle checked={f.intakes.includes("SUMMER")} onChange={(v) => toggleIntake("SUMMER", v)} label="Summer intake" />

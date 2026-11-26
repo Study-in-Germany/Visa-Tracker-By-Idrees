@@ -4,10 +4,10 @@ import Icon from "./Icon";
 export function Chip({ children, tone = "neutral", className = "" }: { children: React.ReactNode; tone?: "neutral" | "good" | "warn" | "bad" | "accent"; className?: string }) {
   const tones = {
     neutral: "bg-paper-sunk text-ink-700 border-line-strong",
-    good: "bg-emerald-50 text-emerald-800 border-emerald-300",
-    warn: "bg-ochre-50 text-ochre-700 border-ochre-500/40",
-    bad: "bg-red-50 text-red-800 border-red-300",
-    accent: "bg-clay-50 text-clay-600 border-clay-400/40",
+    good: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    warn: "bg-amber-50 text-amber-800 border-amber-200",
+    bad: "bg-red-50 text-red-800 border-red-200",
+    accent: "bg-blue-50 text-blue-700 border-blue-200",
   };
   return <span className={`badge ${tones[tone]} ${className}`}>{children}</span>;
 }

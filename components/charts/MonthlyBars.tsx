@@ -15,13 +15,13 @@ export default function MonthlyBars({ data, series, height = 260 }: { data: Reco
     <div role="img" aria-label={`Monthly chart of ${series.map((s) => s.label).join(", ")}`}>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data} margin={{ top: 8, right: 4, left: -16, bottom: 0 }}>
-          <CartesianGrid stroke="#e2dccd" vertical={false} />
-          <XAxis dataKey="month" tickFormatter={monthLabel} fontSize={12} tickLine={false} axisLine={{ stroke: "#cfc7b3" }} minTickGap={16} />
+          <CartesianGrid stroke="rgb(var(--line))" vertical={false} />
+          <XAxis dataKey="month" tickFormatter={monthLabel} fontSize={12} tickLine={false} axisLine={{ stroke: "rgb(var(--line-strong))" }} minTickGap={16} />
           <YAxis allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} />
           <Tooltip
             labelFormatter={(m) => monthLabel(String(m))}
-            cursor={{ fill: "rgba(35,47,39,0.05)" }}
-            contentStyle={{ background: "#fcfaf5", border: "1px solid #e2dccd", borderRadius: 6, fontSize: 12 }}
+            cursor={{ fill: "rgba(24,24,27,0.04)" }}
+            contentStyle={{ background: "rgb(var(--card))", border: "1px solid rgb(var(--line))", borderRadius: 6, fontSize: 12 }}
           />
           {series.length > 1 && <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />}
           {series.map((s) => (

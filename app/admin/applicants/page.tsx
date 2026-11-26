@@ -14,6 +14,7 @@ import StatusBadge from "@/components/StatusBadge";
 import { CONSULATE_OPTIONS } from "@/components/PeriodFilters";
 import AddApplicantModal from "@/components/admin/AddApplicantModal";
 import { useApplicants } from "@/hooks/useApplicants";
+import { invalidateApi } from "@/hooks/useApi";
 import { useDebounced } from "@/hooks/useDebounced";
 import { apiFetch, jsonInit } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
@@ -52,6 +53,9 @@ function ApplicantsInner() {
     setMessage(null);
     try {
       await run();
+      invalidateApi("/api/applicants");
+      invalidateApi("/api/stats");
+      invalidateApi("/api/admin/overview");
       setMessage({ tone: "success", text: okText });
       reload();
     } catch (e: any) {
@@ -76,7 +80,7 @@ function ApplicantsInner() {
       sortKey: "publicId",
       mobile: "title",
       cell: (a) => (
-        <Link href={`/admin/applicants/${a.id}`} className="font-mono font-medium hover:text-clay-600 hover:underline">
+        <Link href={`/admin/applicants/${a.id}`} className="font-mono font-medium text-blue-600 hover:underline">
           {a.publicId}
         </Link>
       ),

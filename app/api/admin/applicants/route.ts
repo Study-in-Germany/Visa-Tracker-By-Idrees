@@ -6,6 +6,8 @@ import { generateAccessCode } from "@/lib/ids";
 import { createApplicantWithTrackingId } from "@/lib/create-applicant";
 import { apiError, forbidden, getActor, unauthorized } from "@/lib/permissions";
 import { VISA_STATUS_LABELS } from "@/lib/constants";
+import { deriveVisaStatus } from "@/lib/status";
+import { CACHE_TAGS, invalidateTags } from "@/lib/cache";
 import { z } from "zod";
 
 const schema = submitApplicantSchema.extend({
@@ -27,7 +29,14 @@ export async function POST(req: NextRequest) {
 
   const accessCode = generateAccessCode();
   const accessCodeHash = await bcrypt.hash(accessCode, 10);
-  const visaStatus = (d.visaStatus ?? "WAITING_LIST") as any;
+  const dateFields = {
+    waitingListDate: day(d.waitingListDate),
+    submissionInviteDate: day(d.submissionInviteDate),
+    documentSubmissionDate: day(d.documentSubmissionDate),
+    appointmentDate: day(d.appointmentDate),
+    decisionDate: day(d.decisionDate),
+  };
+  const visaStatus = deriveVisaStatus(dateFields, d.visaStatus ?? null) as any;
 
   try {
     const created = await createApplicantWithTrackingId({
@@ -36,12 +45,11 @@ export async function POST(req: NextRequest) {
       intake: d.intake || null, visaType: d.visaType || null, consulate: d.consulate,
       waitingListCategory: d.waitingListCategory || null, sourceOfInformation: d.sourceOfInformation || null,
       additionalDocuments: d.additionalDocuments || null,
-      waitingListDate: day(d.waitingListDate), submissionInviteDate: day(d.submissionInviteDate),
-      documentSubmissionDate: day(d.documentSubmissionDate), appointmentDate: day(d.appointmentDate),
-      decisionDate: day(d.decisionDate), isAnonymous: d.isAnonymous ?? false,
+      ...dateFields, isAnonymous: d.isAnonymous ?? false,
       approval: d.approval ?? "APPROVED", visaStatus,
       history: { create: [{ visaStatus, note: "Added by an administrator" }] },
     });
+    invalidateTags(CACHE_TAGS.APPLICANTS);
     return NextResponse.json({ id: created.id, publicId: created.publicId, accessCode }, { status: 201 });
   } catch (err) {
     console.error("Admin create applicant failed:", err);

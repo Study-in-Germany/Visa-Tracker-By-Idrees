@@ -44,7 +44,7 @@ export default function FilterBar({
               </span>
             </li>
           ))}
-          {active.length > 1 && <li className="shrink-0"><button type="button" onClick={onClear} className="min-h-[34px] px-2 text-xs font-semibold text-clay-600 hover:underline">Clear all</button></li>}
+          {active.length > 1 && <li className="shrink-0"><button type="button" onClick={onClear} className="min-h-[34px] px-2 text-xs font-semibold text-blue-600 hover:underline">Clear all</button></li>}
         </ul>
       )}
 
