@@ -8,12 +8,14 @@ import DataTable, { Column, SortState } from "@/components/ui/DataTable";
 import DateRangePicker from "@/components/ui/DateRangePicker";
 import Select from "@/components/ui/Select";
 import { Chip, FilterChip } from "@/components/ui/Chip";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 import { LoadingBlock, Notice } from "@/components/ui/States";
 import Icon from "@/components/ui/Icon";
 import StatusBadge from "@/components/StatusBadge";
 import { CONSULATE_OPTIONS } from "@/components/PeriodFilters";
 import AddApplicantModal from "@/components/admin/AddApplicantModal";
 import { useApplicants } from "@/hooks/useApplicants";
+import { invalidateApi } from "@/hooks/useApi";
 import { useDebounced } from "@/hooks/useDebounced";
 import { apiFetch, jsonInit } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
@@ -38,6 +40,7 @@ function ApplicantsInner() {
   const [sort, setSort] = useState<SortState>({ key: "createdAt", dir: "desc" });
   const [adding, setAdding] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ApplicantRow | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const q = useDebounced(search.trim());
@@ -53,6 +56,9 @@ function ApplicantsInner() {
     try {
       await run();
       setMessage({ tone: "success", text: okText });
+      invalidateApi("/api/stats");
+      invalidateApi("/api/analytics");
+      invalidateApi("/api/admin");
       reload();
     } catch (e: any) {
       setMessage({ tone: "error", text: e?.message || "That action failed." });
@@ -64,10 +70,14 @@ function ApplicantsInner() {
   const setApprovalFor = (a: ApplicantRow, next: string) =>
     act(a.id, () => apiFetch(`/api/applicants/${a.id}`, jsonInit("PATCH", { approval: next })), `${a.publicId} marked ${APPROVAL_LABELS[next].toLowerCase()}.`);
 
-  const remove = (a: ApplicantRow) => {
-    if (!confirm(`Delete ${a.publicId} permanently? This cannot be undone.`)) return;
-    act(a.id, () => apiFetch(`/api/applicants/${a.id}`, { method: "DELETE" }), `${a.publicId} deleted.`);
-  };
+  const remove = (a: ApplicantRow) => setDeleteTarget(a);
+
+  async function confirmRemove() {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    await act(target.id, () => apiFetch(`/api/applicants/${target.id}`, { method: "DELETE" }), `${target.publicId} deleted.`);
+    setDeleteTarget(null);
+  }
 
   const columns: Column<ApplicantRow>[] = [
     {
@@ -95,7 +105,6 @@ function ApplicantsInner() {
     <>
       <PageHeader
         title="Applicants"
-        description="Review submissions and manage records."
         actions={
           <>
             <button type="button" className="btn-primary w-full sm:w-auto" onClick={() => setAdding(true)}><Icon name="plus" size={14} /> Add applicant</button>
@@ -146,7 +155,26 @@ function ApplicantsInner() {
           )}
         />
       </section>
-      <AddApplicantModal open={adding} onClose={() => setAdding(false)} onCreated={() => reload()} />
+      <AddApplicantModal
+        open={adding}
+        onClose={() => setAdding(false)}
+        onCreated={() => {
+          invalidateApi("/api/stats");
+          invalidateApi("/api/analytics");
+          invalidateApi("/api/admin");
+          reload();
+        }}
+      />
+      <ConfirmationModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmRemove}
+        title="Delete applicant"
+        message={deleteTarget ? `Delete ${deleteTarget.publicId} permanently? This action cannot be undone.` : ""}
+        confirmText="Delete record"
+        variant="danger"
+        isLoading={!!deleteTarget && busyId === deleteTarget.id}
+      />
     </>
   );
 }

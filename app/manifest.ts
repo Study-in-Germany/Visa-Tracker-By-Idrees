@@ -12,8 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     display_override: ["standalone", "minimal-ui"],
     orientation: "any",
-    background_color: "#efeee9",
-    theme_color: "#efeee9",
+    background_color: "#ffffff",
+    theme_color: "#ffffff",
     categories: ["education", "productivity"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
@@ -21,7 +21,7 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
-      { name: "Track my application", short_name: "Tracker", url: "/tracker", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
+      { name: "My Journey", short_name: "My Journey", url: "/tracker", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
       { name: "Browse universities", short_name: "Universities", url: "/universities", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
       { name: "Find programmes", short_name: "Programmes", url: "/programmes", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
       { name: "Find accommodation", short_name: "Housing", url: "/accommodation", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },

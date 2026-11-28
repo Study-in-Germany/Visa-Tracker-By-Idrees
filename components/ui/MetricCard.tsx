@@ -22,10 +22,10 @@ export default function MetricCard({
     neutral: "bg-paper-sunk text-ink-700",
     good: "bg-emerald-50 text-emerald-700",
     bad: "bg-red-50 text-red-700",
-    warn: "bg-ochre-50 text-ochre-700",
+    warn: "bg-amber-50 text-amber-800",
   };
   return (
-    <section className="card flex h-full flex-col p-4">
+    <section className="card flex flex-col p-4">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-[13px] font-medium text-ink-700">{title}</h2>
@@ -39,12 +39,12 @@ export default function MetricCard({
           </div>
         </div>
         {action && (
-          <Link href={action.href} className="shrink-0 rounded-md border border-line-strong px-2.5 py-1 text-xs font-medium text-ink-800 hover:bg-paper">
+          <Link href={action.href} className="shrink-0 rounded-md border border-line-strong px-2.5 py-1 text-xs font-medium text-ink-800 hover:bg-[rgb(var(--hover))]">
             {action.label}
           </Link>
         )}
       </header>
-      <div className="mt-3 flex flex-1 flex-col">{children}</div>
+      <div className="mt-3 flex flex-col">{children}</div>
     </section>
   );
 }

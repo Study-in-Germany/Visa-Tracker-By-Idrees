@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth/authorization";
 import { parseCSV } from "@/lib/csv";
 import { parseCalendarDay } from "@/lib/period";
 import { generateAccessCode } from "@/lib/ids";
@@ -69,10 +69,8 @@ function parseBool(value: string | undefined, fallback: boolean): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
 
   const formData = await req.formData().catch(function () {
     return null;
@@ -108,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     const consulate = matchConsulate(row["Consulate"]);
     const accessCode = generateAccessCode();
-    const accessCodeHash = await bcrypt.hash(accessCode, 10);
+    const accessCodeHash = await bcrypt.hash(accessCode, 12);
 
     const dateFields: Record<string, Date | null> = {};
     for (const csvCol of Object.keys(DATE_COLUMNS)) {

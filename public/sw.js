@@ -1,22 +1,41 @@
 /* Service worker: static assets + offline fallback only.
- * API responses and HTML pages are never cached — they can contain
- * user-specific or admin-only data and must always come from the network. */
-const VERSION = "v2";
+ * API responses, auth endpoints, RSC payloads, and private HTML pages are never cached —
+ * they can contain user-specific or admin-only data and must always come from the network. */
+const VERSION = "v4";
 const STATIC_CACHE = `vt-static-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
-const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png"];
+const PRECACHE = [
+  OFFLINE_URL,
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/icon-maskable-512.png",
+  "/icons/apple-touch-icon.png",
+];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches
+      .open(STATIC_CACHE)
+      .then((c) => c.addAll(PRECACHE))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith("vt-static-") && k !== STATIC_CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== STATIC_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "CLEAR_USER_CACHE") {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== STATIC_CACHE).map((k) => caches.delete(k))))
+    );
+  }
 });
 
 self.addEventListener("fetch", (event) => {
@@ -24,7 +43,23 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/")) return; // never touch API traffic
+
+  // Never intercept RSC flight payloads or private/auth/tracker routes
+  if (
+    req.headers.get("rsc") === "1" ||
+    url.searchParams.has("_rsc") ||
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/admin") ||
+    url.pathname.startsWith("/dashboard") ||
+    url.pathname.startsWith("/tracker") ||
+    url.pathname === "/more" ||
+    url.pathname === "/login" ||
+    url.pathname === "/forgot-access-code" ||
+    url.pathname === "/accommodation/new" ||
+    /^\/accommodation\/[^/]+\/edit$/.test(url.pathname)
+  ) {
+    return;
+  }
 
   // Hashed build assets and icons are immutable: cache-first.
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
@@ -44,8 +79,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Page navigations: network only, offline page if the network is down.
+  // Public page navigations: network only with no-store for authenticated freshness, offline fallback when disconnected.
   if (req.mode === "navigate") {
-    event.respondWith(fetch(req).catch(() => caches.match(OFFLINE_URL)));
+    event.respondWith(fetch(req, { cache: "no-store" }).catch(() => caches.match(OFFLINE_URL)));
   }
 });

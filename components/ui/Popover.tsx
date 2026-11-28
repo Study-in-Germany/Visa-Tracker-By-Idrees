@@ -115,8 +115,9 @@ export default function Popover({
         ref={panelRef}
         role="dialog"
         aria-label={title}
+        data-popover-dialog="true"
         style={sheet || !pos ? undefined : { position: "fixed", top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
-        className={`z-[80] overflow-auto border border-line bg-paper-raised shadow-[0_12px_32px_-8px_rgba(35,47,39,0.25)] ${
+        className={`z-[80] overflow-auto border border-line bg-paper-raised shadow-lg ${
           sheet
             ? "fixed inset-x-0 bottom-0 max-h-[85vh] rounded-t-2xl pb-[env(safe-area-inset-bottom)]"
             : "rounded-xl"

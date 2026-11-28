@@ -104,9 +104,11 @@ export const GENDER_LABELS: Record<string, string> = {
   PREFER_NOT_TO_SAY: "Prefer not to say",
 };
 
+import { WHATSAPP_CHANNELS, WHATSAPP_COMMUNITIES } from "./whatsapp";
+
 export const COMMUNITY_LINKS = {
-  whatsappCommunity: "https://chat.whatsapp.com/BZ6f2Yodozr3oNWTtqsR40",
-  whatsappChannel: "https://whatsapp.com/channel/0029VbD6YAn4yltJDqNw773k",
+  whatsappCommunity: WHATSAPP_COMMUNITIES[0].href,
+  whatsappChannel: WHATSAPP_CHANNELS[0].href,
   gradeCalculator: "https://german-grade-calculator-six.vercel.app/",
 };
 

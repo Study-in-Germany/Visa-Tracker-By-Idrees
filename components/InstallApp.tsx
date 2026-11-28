@@ -24,15 +24,22 @@ function Steps({ platform }: { platform: "ios" | "android" | "other" }) {
  * "Install app" button. Uses the browser's native install dialog where available (Android Chrome/Edge); otherwise shows
  * short instructions (iOS Safari, or an Android browser that hasn't offered the install yet). Hidden once installed.
  */
-export default function InstallApp({ className = "" }: { className?: string }) {
+export default function InstallApp({ className = "", compact = false }: { className?: string; compact?: boolean }) {
   const { installed, platform, canPrompt, install } = useInstallPrompt();
   const [help, setHelp] = useState(false);
   if (installed || (!canPrompt && platform === "other")) return null;
   return (
     <>
-      <button type="button" onClick={() => (canPrompt ? install() : setHelp(true))} className={`flex min-h-[42px] w-full items-center gap-2.5 rounded-lg px-3 text-left text-[14px] font-medium text-ink-700 transition-colors hover:bg-paper lg:min-h-[36px] lg:text-[13px] ${className}`}>
-        <Icon name="upload" size={17} className="rotate-180 text-mute" />
-        <span className="flex-1 truncate">Install app</span>
+      <button
+        type="button"
+        onClick={() => (canPrompt ? install() : setHelp(true))}
+        title={compact ? "Install app" : undefined}
+        className={`flex h-10 w-full items-center rounded-xl text-left text-[13px] font-medium text-ink-700 transition-colors hover:bg-paper-sunk hover:text-ink-900 ${compact ? "justify-center" : ""} ${className}`}
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center">
+          <Icon name="upload" size={17} className="rotate-180 text-mute" />
+        </span>
+        {!compact && <span className="flex-1 truncate pr-3">Install app</span>}
       </button>
       <Modal open={help} onClose={() => setHelp(false)} title="Install Visa Tracker" size="sm" footer={<button type="button" className="btn-primary" onClick={() => setHelp(false)}>Got it</button>}>
         <Steps platform={platform} />

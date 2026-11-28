@@ -6,6 +6,9 @@ import AppShell from "@/components/AppShell";
 import RegisterSW from "@/components/RegisterSW";
 import Splash from "@/components/Splash";
 import { THEME_INIT_SCRIPT } from "@/hooks/useTheme";
+import { getSessionInfo } from "@/lib/session-profile";
+
+export const dynamic = "force-dynamic";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 
@@ -24,19 +27,21 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#efeee9" },
-    { media: "(prefers-color-scheme: dark)", color: "#111412" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#111111" },
   ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const initialSession = await getSessionInfo();
+
   return (
-    <html lang="en" className={`${sans.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} bg-paper`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="font-sans">
-        <AppShell>{children}</AppShell>
+      <body className="min-h-[100dvh] bg-paper font-sans">
+        <AppShell initialSession={initialSession}>{children}</AppShell>
         <Splash />
         <RegisterSW />
       </body>

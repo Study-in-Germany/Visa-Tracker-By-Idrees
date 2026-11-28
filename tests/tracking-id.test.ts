@@ -40,13 +40,24 @@ describe("tracking ID allocation (PostgreSQL)", { skip: !testDatabaseUrl }, () =
     submit = (await import("../app/api/applicants/route")).POST;
     importApplicants = (await import("../app/api/admin/import-applicants/route")).POST;
     process.env.AUTH_SECRET = "tracking-id-tests-only-secret";
-    const auth = await import("../lib/auth");
-    adminCookie = `${auth.SESSION_COOKIE_NAME}=${await auth.createSessionToken("tracking-id-admin@example.test")}`;
   });
   beforeEach(async () => {
     await raw.applicant.deleteMany();
     await raw.adminUser.deleteMany();
-    await raw.adminUser.create({ data: { email: "tracking-id-admin@example.test", passwordHash: "test-hash" } });
+    const admin = await raw.adminUser.create({
+      data: {
+        email: "tracking-id-admin@example.test",
+        passwordHash: "test-hash",
+        totpEnabledAt: new Date(),
+      },
+    });
+    const auth = await import("../lib/auth");
+    const createdSess = await auth.createAdminSession({
+      adminUserId: admin.id,
+      authMethod: "password+totp",
+      mfaVerifiedAt: new Date(),
+    });
+    adminCookie = `${auth.SESSION_COOKIE_NAME}=${createdSess.rawToken}`;
   });
   after(async () => {
     if (db) {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Icon from "@/components/ui/Icon";
@@ -8,6 +9,12 @@ import { JOURNEY_STAGES, VISA_STATUS_LABELS, VISA_STATUS_HEX } from "@/lib/const
 import { estimateNextStage } from "@/lib/eta";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
+  return {
+    title: `${params.publicId.toUpperCase()} · My Journey`,
+  };
+}
 
 const ACTIVE_STATUSES = [
   "WAITING_LIST", "WAITING_FOR_SUBMISSION", "SUBMISSION_RECEIVED",
@@ -48,24 +55,30 @@ async function getQueuePosition(applicant: NonNullable<Awaited<ReturnType<typeof
 }
 
 async function getEta(applicant: NonNullable<Awaited<ReturnType<typeof getApplicant>>>) {
-  const stageKeys = JOURNEY_STAGES.map((s) => s.key) as (keyof typeof applicant)[];
+  const CORE_STAGES: { key: keyof typeof applicant; label: string }[] = [
+    { key: "waitingListDate", label: "Waiting List" },
+    { key: "submissionInviteDate", label: "Submission Invitation" },
+    { key: "documentSubmissionDate", label: "Documents Submitted" },
+    { key: "appointmentDate", label: "Appointment" },
+    { key: "decisionDate", label: "Decision" },
+  ];
   let fromIdx = -1;
-  for (let i = 0; i < stageKeys.length; i++) {
-    if (!(applicant as any)[stageKeys[i]]) { fromIdx = i; break; }
+  for (let i = 0; i < CORE_STAGES.length; i++) {
+    if (!(applicant as any)[CORE_STAGES[i].key]) { fromIdx = i; break; }
   }
   if (fromIdx <= 0) return null;
-  const fromKey = stageKeys[fromIdx - 1];
-  const toKey = stageKeys[fromIdx];
+  const fromKey = CORE_STAGES[fromIdx - 1].key;
+  const toKey = CORE_STAGES[fromIdx].key;
   const fromDate = (applicant as any)[fromKey] as Date | null;
   if (!fromDate) return null;
   const peers = await prisma.applicant.findMany({
-    where: { approval: "APPROVED", consulate: applicant.consulate },
+    where: { approval: "APPROVED", consulate: applicant.consulate, [fromKey]: { not: null }, [toKey]: { not: null } } as any,
     select: { [fromKey]: true, [toKey]: true } as any,
   } as any);
   const samples = peers.map((p: any) => ({ from: p[fromKey], to: p[toKey] }));
   const result = estimateNextStage(samples, fromDate);
   if (!result) return null;
-  return { ...result, stageLabel: JOURNEY_STAGES[fromIdx].label };
+  return { ...result, stageLabel: CORE_STAGES[fromIdx].label };
 }
 
 function daysBetween(a: Date | string | null, b: Date | null | string): number | null {
@@ -94,29 +107,22 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
   return (
     <div className="space-y-4">
 
-      {/* ── Back crumb ─────────────────────────────────────── */}
-      <Link href="/tracker" className="inline-flex items-center gap-1.5 text-xs font-medium text-mute hover:text-ink-900 transition-colors">
-        <Icon name="chevronLeft" size={13} /> Back to Tracker
-      </Link>
-
       {/* ── Hero card ──────────────────────────────────────── */}
       <div
-        className="relative overflow-hidden rounded-2xl border border-line bg-paper-raised p-5 sm:p-6"
+        className="relative overflow-hidden rounded-xl border border-line bg-paper-raised p-5 sm:p-6"
         style={{ borderLeftColor: statusHex, borderLeftWidth: 4 }}
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            {/* Eyebrow */}
-            <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="rounded-lg bg-paper-sunk px-2.5 py-1 font-mono text-[13px] font-bold text-ink-700">
                 {applicant.publicId}
               </span>
               <StatusBadge status={applicant.visaStatus} />
             </div>
-            {/* Name */}
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
               {applicant.isAnonymous ? "Anonymous applicant" : applicant.name}
-            </h1>
+            </h2>
             {/* Sub info */}
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-600">
               {applicant.university && (
@@ -218,17 +224,16 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
                 return (
                   <li
                     key={stage.key}
-                    className={`flex items-center gap-4 px-5 py-3.5 ${isNext ? "bg-ochre-50/40" : ""}`}
+                    className={`flex items-center gap-4 px-5 py-3.5 ${isNext ? "bg-amber-50/40" : ""}`}
                   >
                     {/* Icon circle */}
                     <span
-                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 ${
-                        isDone
-                          ? "border-transparent text-white"
-                          : isNext
-                          ? "border-ochre-400 text-ochre-600 bg-ochre-50"
+                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 ${isDone
+                        ? "border-transparent text-white"
+                        : isNext
+                          ? "border-amber-400 text-amber-600 bg-amber-50"
                           : "border-line bg-paper-sunk text-mute"
-                      }`}
+                        }`}
                       style={isDone ? { background: statusHex, borderColor: statusHex } : {}}
                     >
                       {isDone ? (
@@ -244,10 +249,10 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
 
                     {/* Label + gap */}
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[13px] font-semibold ${isDone ? "text-ink-900" : isNext ? "text-ochre-700" : "text-mute"}`}>
+                      <p className={`text-[13px] font-semibold ${isDone ? "text-ink-900" : isNext ? "text-amber-700" : "text-mute"}`}>
                         {stage.label}
                         {isNext && (
-                          <span className="ml-2 rounded-full bg-ochre-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ochre-700">
+                          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
                             Next
                           </span>
                         )}
@@ -331,11 +336,10 @@ export default async function ApplicantPage({ params }: { params: { publicId: st
             <div className="card overflow-hidden">
               <div className="border-b border-line px-5 py-4 flex items-center justify-between gap-2">
                 <h2 className="font-semibold">Next stage estimate</h2>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                  eta.confidence === "High" ? "bg-emerald-50 text-emerald-700" :
-                  eta.confidence === "Medium" ? "bg-ochre-50 text-ochre-700" :
-                  "bg-red-50 text-red-600"
-                }`}>{eta.confidence}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${eta.confidence === "High" ? "bg-emerald-50 text-emerald-700" :
+                  eta.confidence === "Medium" ? "bg-amber-50 text-amber-700" :
+                    "bg-red-50 text-red-600"
+                  }`}>{eta.confidence}</span>
               </div>
               <div className="p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-mute mb-1">{eta.stageLabel}</p>

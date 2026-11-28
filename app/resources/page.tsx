@@ -1,61 +1,204 @@
 import Link from "next/link";
 import { COMMUNITY_LINKS } from "@/lib/constants";
+import { WHATSAPP_CHANNELS, WHATSAPP_COMMUNITIES } from "@/lib/whatsapp";
 import PageHeader from "@/components/ui/PageHeader";
-import Icon, { IconName } from "@/components/ui/Icon";
+import Icon, { type IconName } from "@/components/ui/Icon";
+import WhatsAppResourceCard from "@/components/resources/WhatsAppResourceCard";
 
-type Item = { title: string; body: string; href: string; cta: string; icon: IconName; external?: boolean };
+type ToolItem = {
+  title: string;
+  body: string;
+  href: string;
+  icon: IconName;
+};
 
-const COMMUNITY: Item[] = [
-  { title: "WhatsApp community", body: "Ask questions and talk to other applicants in the Study in Germany group.", href: COMMUNITY_LINKS.whatsappCommunity, cta: "Join community", icon: "users", external: true },
-  { title: "WhatsApp channel", body: "Announcements and quick updates, without the chat noise.", href: COMMUNITY_LINKS.whatsappChannel, cta: "Follow channel", icon: "bell", external: true },
-  { title: "German grade calculator", body: "Convert your grades to the German scale universities use (modified Bavarian formula).", href: COMMUNITY_LINKS.gradeCalculator, cta: "Open calculator", icon: "chart", external: true },
+const TOOLS: ToolItem[] = [
+  {
+    title: "My Journey",
+    body: "Browse approved timelines and search by Tracking ID.",
+    href: "/tracker",
+    icon: "route",
+  },
+  {
+    title: "Queue progress",
+    body: "How fast the waiting list is moving at each embassy.",
+    href: "/queue-progress",
+    icon: "queue",
+  },
+  {
+    title: "Universities",
+    body: "German universities, programmes, and deadlines in one place.",
+    href: "/universities",
+    icon: "school",
+  },
+  {
+    title: "Accommodation",
+    body: "Find a room, or post what you are looking for.",
+    href: "/accommodation",
+    icon: "building",
+  },
+  {
+    title: "Analytics",
+    body: "Processing times and outcomes, month by month.",
+    href: "/analytics",
+    icon: "chart",
+  },
+  {
+    title: "Submit your entry",
+    body: "Add your timeline so other applicants know what to expect.",
+    href: "/submit",
+    icon: "filePlus",
+  },
 ];
-
-const TOOLS: Item[] = [
-  { title: "Visa tracker", body: "See where other applicants are in the queue and search by Tracking ID.", href: "/tracker", cta: "Open tracker", icon: "search" },
-  { title: "Queue progress", body: "How fast the waiting list is moving at each embassy.", href: "/queue-progress", cta: "See progress", icon: "queue" },
-  { title: "Universities", body: "German universities, programmes and application deadlines in one place.", href: "/universities", cta: "Browse universities", icon: "school" },
-  { title: "Accommodation", body: "Find a room, or tell people what you are looking for.", href: "/accommodation", cta: "Find a place", icon: "home" },
-  { title: "Analytics", body: "Processing times and outcomes, month by month.", href: "/analytics", cta: "View analytics", icon: "pulse" },
-  { title: "Submit your entry", body: "Add your own journey so the next applicant knows what to expect.", href: "/submit", cta: "Submit entry", icon: "plus" },
-];
-
-function Card({ r }: { r: Item }) {
-  const inner = (
-    <>
-      <span className="grid h-11 w-11 place-items-center rounded-xl bg-clay-50 text-clay-500 transition-transform group-hover:scale-105"><Icon name={r.icon} size={20} /></span>
-      <h3 className="mt-4 text-[15px] font-semibold">{r.title}</h3>
-      <p className="mt-1.5 flex-1 text-[13px] leading-relaxed text-mute">{r.body}</p>
-      <span className="mt-4 inline-flex min-h-[32px] items-center gap-1.5 text-[13px] font-semibold text-ink-900">
-        {r.cta} <Icon name={r.external ? "external" : "chevronRight"} size={13} className="transition-transform group-hover:translate-x-0.5" />
-      </span>
-    </>
-  );
-  const cls = "group card flex flex-col p-5 transition-shadow hover:shadow-md active:scale-[0.99]";
-  return r.external ? (
-    <a href={r.href} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
-  ) : (
-    <Link href={r.href} className={cls}>{inner}</Link>
-  );
-}
-
-function Section({ title, items }: { title: string; items: Item[] }) {
-  return (
-    <section className="mb-8">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-mute">{title}</h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-        {items.map((r) => <Card key={r.title} r={r} />)}
-      </div>
-    </section>
-  );
-}
 
 export default function ResourcesPage() {
   return (
-    <>
+    <div className="space-y-8">
       <PageHeader title="Resources" />
-      <Section title="Community" items={COMMUNITY} />
-      <Section title="Tools on this site" items={TOOLS} />
-    </>
+
+      {/* Section 1: WhatsApp channels */}
+      <section aria-label="WhatsApp channels">
+        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-mute">
+          WhatsApp channels
+        </h2>
+        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 md:gap-4">
+          {WHATSAPP_CHANNELS.map((item) => (
+            <WhatsAppResourceCard
+              key={item.id}
+              kind={item.kind}
+              classification={item.classification}
+              title={item.title}
+              description={item.description}
+              metaLabel={item.metaLabel}
+              metaIcon={item.metaIcon}
+              ctaLabel={item.ctaLabel}
+              href={item.href}
+              variant={item.variant}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Section 2: WhatsApp communities */}
+      <section aria-label="WhatsApp communities">
+        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-mute">
+          WhatsApp communities
+        </h2>
+        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 lg:grid-cols-3 md:gap-4">
+          {WHATSAPP_COMMUNITIES.map((item) => (
+            <WhatsAppResourceCard
+              key={item.id}
+              kind={item.kind}
+              classification={item.classification}
+              title={item.title}
+              description={item.description}
+              metaLabel={item.metaLabel}
+              metaIcon={item.metaIcon}
+              ctaLabel={item.ctaLabel}
+              href={item.href}
+              variant={item.variant}
+            />
+          ))}
+        </div>
+        <p className="mt-2.5 text-[12px] text-mute">
+          Community-operated WhatsApp resources. Independent from WhatsApp and the German Embassy.
+        </p>
+      </section>
+
+      {/* Section 2: Featured external tool */}
+      <section aria-label="Featured tool">
+        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-mute">
+          Featured tool
+        </h2>
+        <article className="group relative flex flex-col gap-4 rounded-[18px] border border-line bg-card p-4 transition-colors hover:bg-[rgb(var(--hover))] sm:p-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 items-start gap-3.5">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-paper-sunk text-ink-800">
+              <Icon name="calculator" size={20} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-[17px] font-semibold leading-snug text-ink-900">
+                German grade calculator
+              </h3>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-mute">
+                Convert your grades to the German scale universities use (modified Bavarian formula).
+              </p>
+            </div>
+          </div>
+
+          <a
+            href={COMMUNITY_LINKS.gradeCalculator}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open German grade calculator (opens in new tab)"
+            className="btn-secondary inline-flex min-h-[44px] w-full shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-[13.5px] font-semibold after:absolute after:inset-0 after:rounded-[18px] md:w-auto"
+          >
+            <span>Open calculator</span>
+            <Icon name="arrowUpRight" size={16} />
+          </a>
+        </article>
+      </section>
+
+      {/* Section 3: Internal Visa Tracker tools */}
+      <section aria-label="Visa Tracker tools">
+        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-mute">
+          Visa Tracker tools
+        </h2>
+
+        {/* Mobile grouped navigation rows */}
+        <ul
+          data-resources-mobile-tools
+          className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card md:hidden"
+        >
+          {TOOLS.map((tool) => (
+            <li key={tool.href}>
+              <Link
+                href={tool.href}
+                className="flex min-h-[56px] items-center gap-3 px-4 py-3 transition-colors hover:bg-[rgb(var(--hover))] active:bg-[rgb(var(--hover))]"
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line bg-paper-sunk text-ink-800">
+                  <Icon name={tool.icon} size={18} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-semibold text-ink-900">
+                    {tool.title}
+                  </span>
+                  <span className="block truncate text-[12px] text-mute">
+                    {tool.body}
+                  </span>
+                </span>
+                <Icon name="chevronRight" size={16} className="shrink-0 text-mute" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        {/* Tablet & Desktop compact neutral grid */}
+        <div
+          data-resources-desktop-tools
+          className="hidden gap-3.5 md:grid md:grid-cols-2 lg:grid-cols-3"
+        >
+          {TOOLS.map((tool) => (
+            <Link
+              key={tool.href}
+              href={tool.href}
+              className="group flex flex-col rounded-2xl border border-line bg-card p-4 transition-colors hover:bg-[rgb(var(--hover))]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line bg-paper-sunk text-ink-800">
+                  <Icon name={tool.icon} size={18} />
+                </span>
+                <Icon
+                  name="chevronRight"
+                  size={16}
+                  className="mt-1 shrink-0 text-mute transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-ink-900"
+                />
+              </div>
+              <h3 className="mt-3 text-[15px] font-semibold text-ink-900">{tool.title}</h3>
+              <p className="mt-1 text-[13px] leading-relaxed text-mute">{tool.body}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }

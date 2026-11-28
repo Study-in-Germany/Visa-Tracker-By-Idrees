@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { apiError, canManageListing, getActor, unauthorized } from "@/lib/permissions";
 import { rateLimit } from "@/lib/rate-limit";
+import { privateJson } from "@/lib/security/cache-policy";
 
 // GET /api/listings/:id/contact — contact details are shown to signed-in users only, so they can't be scraped anonymously.
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -16,5 +17,5 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   });
   if (!listing || (listing.status !== "APPROVED" && !canManageListing(actor, listing))) return apiError("Listing not found.", 404);
   const { contactName, contactPhone, contactEmail } = listing;
-  return NextResponse.json({ contact: { contactName, contactPhone, contactEmail } });
+  return privateJson({ contact: { contactName, contactPhone, contactEmail } });
 }

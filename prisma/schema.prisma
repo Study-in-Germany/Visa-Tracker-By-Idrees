@@ -44,6 +44,10 @@ model Applicant {
 
   name                String
   email               String?
+  emailVerifiedAt     DateTime?
+  notifyAnnouncements Boolean   @default(true)
+  notifyStatusUpdates Boolean   @default(true)
+  unsubscribeToken    String?   @unique
   gender              Gender?
   city                String?
   province            String?
@@ -60,15 +64,24 @@ model Applicant {
   waitingListDate         DateTime?
   submissionInviteDate    DateTime?
   documentSubmissionDate  DateTime?
+  preliminaryReviewDate   DateTime?
   correctionRequestDate   DateTime?
   correctionSubmittedDate DateTime?
+  correctionAcceptedDate  DateTime?
+  appointmentInviteDate   DateTime?
   appointmentDate         DateTime?
   interviewDate           DateTime?
   decisionDate            DateTime?
+  passportDispatchedDate  DateTime?
+  passportReceivedDate    DateTime?
+  lastConfirmedAt         DateTime?
 
   visaStatus  VisaStatus    @default(WAITING_LIST)
   approval    ApprovalState @default(PENDING_REVIEW)
   isAnonymous Boolean       @default(true)
+
+  sessionVersion Int       @default(1)
+  disabledAt     DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -76,11 +89,16 @@ model Applicant {
   history       StatusEvent[]
   listings      Listing[]
   listingImages ListingImage[]
+  otps          EmailOtp[]
+  emailJobs     EmailJob[]
+  forecasts     ForecastSnapshot[]
+  sessions      AuthSession[]
 
   @@index([approval])
   @@index([visaStatus])
   @@index([university])
   @@index([consulate])
+  @@index([email])
   @@index([approval, waitingListDate])
   @@index([approval, visaStatus])
 }
@@ -110,10 +128,19 @@ model Announcement {
 }
 
 model AdminUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id            String              @id @default(cuid())
+  email         String              @unique
+  passwordHash  String
+  role          String              @default("ADMIN")
+  disabledAt    DateTime?
+  tokenVersion  Int                 @default(1)
+  totpSecretEnc String?
+  totpEnabledAt DateTime?
+  mfaUpdatedAt  DateTime?
+  createdAt     DateTime            @default(now())
+
+  sessions      AuthSession[]
+  recoveryCodes AdminRecoveryCode[]
 }
 
 // ───────────── University directory ─────────────
@@ -396,4 +423,309 @@ enum ApplicationRoute {
   UNI_ASSIST
   VPD
   OTHER
+}
+
+// ───────────── Email OTP & Durable Notification Queue ─────────────
+
+enum OtpPurpose {
+  LOGIN
+  RECOVERY
+  EMAIL_VERIFY
+}
+
+enum EmailJobStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model EmailOtp {
+  id            String     @id @default(cuid())
+  purpose       OtpPurpose
+  email         String
+  applicant     Applicant? @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  applicantId   String?
+  codeHash      String
+  attempts      Int        @default(0)
+  maxAttempts   Int        @default(5)
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  invalidatedAt DateTime?
+  requestIp     String?
+  createdAt     DateTime   @default(now())
+
+  @@index([email, purpose, createdAt])
+  @@index([applicantId, purpose])
+  @@index([expiresAt])
+}
+
+model EmailJob {
+  id             String         @id @default(cuid())
+  dedupeKey      String         @unique
+  kind           String
+  toEmail        String
+  recipientName  String?
+  subject        String
+  htmlBody       String
+  textBody       String
+  applicant      Applicant?     @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+  applicantId    String?
+  announcementId String?
+  status         EmailJobStatus @default(PENDING)
+  attempts       Int            @default(0)
+  maxAttempts    Int            @default(4)
+  nextAttemptAt  DateTime       @default(now())
+  lastError      String?
+  messageId      String?
+  sentAt         DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([announcementId])
+  @@index([applicantId])
+  @@index([createdAt])
+}
+
+// ───────────── Statistical Forecasting & External Evidence Layer ─────────────
+
+enum EvidenceSourceType {
+  WHATSAPP_EXPORT
+  CHANNEL_EXPORT
+  COMMUNITY_PLATFORM
+  CSV_IMPORT
+  JSON_IMPORT
+  MANUAL_ADMIN
+  OFFICIAL_GUIDANCE
+}
+
+enum EvidenceReliability {
+  OFFICIAL
+  VERIFIED_COMMUNITY
+  COMMUNITY_PLATFORM
+  CROWD_REPORT
+  UNVERIFIED
+}
+
+enum EvidenceVerificationStatus {
+  PENDING_REVIEW
+  APPROVED
+  CONFLICTING
+  REJECTED
+}
+
+enum DatePrecision {
+  EXACT
+  INFERRED_YEAR
+  MONTH_ONLY
+  APPROXIMATE
+}
+
+enum QueueObservationType {
+  SUBMISSION_FRONTIER
+  APPOINTMENT_SUBMISSION_FRONTIER
+  APPOINTMENT_WL_COHORT_FRONTIER
+}
+
+model EvidenceSource {
+  id                 String                     @id @default(cuid())
+  name               String
+  sourceType         EvidenceSourceType
+  sourceRef          String                     @unique
+  publishedAt        DateTime?
+  importedAt         DateTime                   @default(now())
+  reliability        EvidenceReliability        @default(CROWD_REPORT)
+  usagePermission    String                     @default("COMMUNITY_EXPORT_ANALYTICS")
+  verificationStatus EvidenceVerificationStatus @default(PENDING_REVIEW)
+  lastUpdatedAt      DateTime                   @default(now())
+  notes              String?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  timelines         ExternalTimelineObservation[]
+  queueObservations QueueObservation[]
+
+  @@index([sourceType])
+  @@index([verificationStatus])
+}
+
+model ExternalTimelineObservation {
+  id                      String                     @id @default(cuid())
+  source                  EvidenceSource             @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId                String
+  embassy                 String
+  visaCategory            String                     @default("Study")
+  waitingListJoinedDate   DateTime?
+  submissionInvitedDate   DateTime?
+  documentsSubmittedDate  DateTime?
+  preliminaryReviewDate   DateTime?
+  correctionRequestDates  Json?
+  correctionResponseDates Json?
+  correctionAcceptedDate  DateTime?
+  appointmentInvitedDate  DateTime?
+  appointmentBookedDate   DateTime?
+  appointmentAttendedDate DateTime?
+  decisionDate            DateTime?
+  decisionOutcome         String?
+  passportDispatchedDate  DateTime?
+  passportReceivedDate    DateTime?
+  reportPublishedAt       DateTime
+  datePrecision           DatePrecision              @default(EXACT)
+  confidence              Float                      @default(0.75)
+  verificationStatus      EvidenceVerificationStatus @default(PENDING_REVIEW)
+  dedupeFingerprint       String                     @unique
+  conflictNotes           String?
+  rawExcerpt              String?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+
+  @@index([embassy, verificationStatus])
+  @@index([visaCategory, verificationStatus])
+  @@index([reportPublishedAt])
+  @@index([waitingListJoinedDate])
+  @@index([sourceId])
+}
+
+model QueueObservation {
+  id                    String                     @id @default(cuid())
+  source                EvidenceSource             @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId              String
+  embassy               String
+  visaCategory          String                     @default("Study")
+  observationDate       DateTime
+  queueType             QueueObservationType
+  observedFrontierDate  DateTime
+  sampleSize            Int?
+  reportedSubmissions   Int?
+  reportedCorrections   Int?
+  reportedAppointments  Int?
+  reportedActivityCount Int?
+  confidence            Float                      @default(0.85)
+  verificationStatus    EvidenceVerificationStatus @default(APPROVED)
+  dedupeFingerprint     String                     @unique
+  notes                 String?
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+
+  @@index([embassy, queueType, observationDate])
+  @@index([verificationStatus])
+  @@index([sourceId])
+}
+
+model ForecastSnapshot {
+  id                  String     @id @default(cuid())
+  applicant           Applicant? @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+  applicantId         String?
+  modelVersion        String
+  generatedAt         DateTime   @default(now())
+  embassy             String
+  visaCategory        String     @default("Study")
+  inputJoinDate       DateTime
+  predictedMilestone  String
+  p10Date             DateTime?
+  p25Date             DateTime?
+  p50Date             DateTime?
+  p75Date             DateTime?
+  p90Date             DateTime?
+  sourcesSummary      Json
+  sampleSize          Int        @default(0)
+  effectiveSampleSize Float      @default(0)
+  confidenceLevel     String
+  actualOutcomeDate   DateTime?
+  createdAt           DateTime   @default(now())
+
+  @@index([applicantId, generatedAt])
+  @@index([embassy, modelVersion])
+  @@index([generatedAt])
+}
+
+// ───────────── Server-Backed Sessions, Grants, MFA, Rate Limits & Audit Log ─────────────
+
+enum AuthSubjectType {
+  APPLICANT
+  ADMIN
+}
+
+enum AuthGrantPurpose {
+  RECOVERY
+  OTP_SELECT
+  ADMIN_MFA_CHALLENGE
+  ADMIN_MFA_ENROLL
+}
+
+model AuthSession {
+  id                String          @id @default(cuid())
+  tokenHash         String          @unique
+  subjectType       AuthSubjectType
+  applicant         Applicant?      @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  applicantId       String?
+  adminUser         AdminUser?      @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUserId       String?
+  authMethod        String
+  mfaVerifiedAt     DateTime?
+  amr               String[]        @default([])
+  userAgent         String?
+  ipHash            String?
+  createdAt         DateTime        @default(now())
+  lastActivityAt    DateTime        @default(now())
+  idleExpiresAt     DateTime
+  absoluteExpiresAt DateTime
+  revokedAt         DateTime?
+  revokedReason     String?
+
+  @@index([applicantId, revokedAt])
+  @@index([adminUserId, revokedAt])
+  @@index([absoluteExpiresAt])
+}
+
+model AuthGrant {
+  id          String           @id @default(cuid())
+  tokenHash   String           @unique
+  purpose     AuthGrantPurpose
+  email       String
+  subjectIds  String[]         @default([])
+  adminUserId String?
+  payload     Json?
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([expiresAt])
+  @@index([purpose, email])
+}
+
+model AdminRecoveryCode {
+  id          String    @id @default(cuid())
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUserId String
+  codeHash    String
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([adminUserId, usedAt])
+}
+
+model RateLimitBucket {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
+
+model AuthAuditLog {
+  id        String   @id @default(cuid())
+  eventType String
+  actorType String
+  actorId   String?
+  targetId  String?
+  ipHash    String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([actorId, createdAt])
 }

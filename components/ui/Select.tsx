@@ -116,7 +116,7 @@ export default function Select({
         onKeyDown={onKeyDown}
         className={`flex w-full items-center justify-between gap-2 border bg-paper-raised text-left transition-colors hover:border-ink-300 disabled:cursor-not-allowed disabled:opacity-50 ${
           pill ? "min-h-[32px] rounded-lg px-2.5 text-[13px]" : "min-h-[36px] rounded-lg px-3 text-[13px]"
-        } ${open ? "border-ink-600 ring-1 ring-ink-600" : "border-line-strong"} ${showClear ? "pr-8" : ""} ${buttonClassName}`}
+        } ${open ? "border-ink-600 ring-1 ring-ink-600" : "border-line-strong"} ${showClear ? "pr-12" : ""} ${buttonClassName}`}
       >
         <span className="flex min-w-0 items-center gap-1.5">
           {prefix && <span className="shrink-0 text-mute">{prefix}</span>}
@@ -125,7 +125,7 @@ export default function Select({
         <Icon name="chevronDown" size={14} className={`shrink-0 text-mute transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {showClear && (
-        <button type="button" aria-label={`Clear ${label}`} onClick={() => onChange("")} className="absolute right-6 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-mute hover:bg-paper-sunk hover:text-ink-900">
+        <button type="button" aria-label={`Clear ${label}`} onClick={() => onChange("")} className="absolute right-8 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-mute hover:bg-paper-sunk hover:text-ink-900">
           <Icon name="close" size={12} />
         </button>
       )}

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Icon from "@/components/ui/Icon";
 import { ErrorState } from "@/components/ui/States";
-import { AttentionTile, DailyBars, Kpi, QuickLink, Section, timeAgo } from "@/components/admin/parts";
+import { AttentionTile, DailyBars, Kpi, Section, timeAgo } from "@/components/admin/parts";
 import AddApplicantModal from "@/components/admin/AddApplicantModal";
 import { useApi } from "@/hooks/useApi";
 import { VISA_STATUS_HEX, VISA_STATUS_LABELS, VISA_STATUS_ORDER } from "@/lib/constants";
@@ -161,20 +161,6 @@ export default function AdminDashboardPage() {
               </Section>
             </div>
           </div>
-
-          <section aria-label="Shortcuts">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-mute">Manage</h2>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <QuickLink href="/admin/applicants" icon="users" title="Applicants" desc="Approve, edit, add or delete records" />
-              <QuickLink href="/admin/universities" icon="school" title="Universities & programmes" desc="Maintain the directory" />
-              <QuickLink href="/admin/accommodation" icon="home" title="Accommodation" desc="Moderate listings and reports" />
-              <QuickLink href="/admin/announcements" icon="bell" title="Announcements" desc="Publish and pin updates" />
-              <QuickLink href="/admin/imports" icon="layers" title="Update data" desc="Refresh universities and programmes" />
-              <QuickLink href="/admin/import" icon="upload" title="Import applicants" desc="Bulk upload from a spreadsheet" />
-              <QuickLink href="/admin/settings" icon="settings" title="Settings" desc="Password, security and appearance" />
-              <QuickLink href="/tracker" icon="external" title="View public site" desc="See what visitors see" />
-            </div>
-          </section>
         </div>
       )}
 

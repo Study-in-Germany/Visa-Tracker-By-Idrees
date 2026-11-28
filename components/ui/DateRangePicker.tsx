@@ -11,7 +11,7 @@ import type { Period } from "@/lib/period";
  * Preset list + range calendar. Presets apply immediately; a custom range needs both
  * ends and is applied with the button. Shows what is selected before it is applied.
  */
-export default function DateRangePicker({ value, onChange, label = "Joined", className = "" }: { value: Period; onChange: (p: Period) => void; label?: string; className?: string }) {
+export default function DateRangePicker({ value, onChange, label = "Joined", className = "", fullWidth = false }: { value: Period; onChange: (p: Period) => void; label?: string; className?: string; fullWidth?: boolean }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Period>(value);
   const ref = useRef<HTMLButtonElement>(null);
@@ -35,11 +35,13 @@ export default function DateRangePicker({ value, onChange, label = "Joined", cla
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`flex min-h-[32px] w-full items-center gap-1.5 rounded-lg border bg-paper-raised px-2.5 text-[13px] transition-colors hover:border-ink-300 sm:w-auto ${open ? "border-ink-600 ring-1 ring-ink-600" : "border-line-strong"}`}
+        className={`flex min-h-[36px] w-full items-center gap-1.5 rounded-lg border bg-paper-raised px-2.5 text-[13px] transition-colors hover:border-ink-300 ${
+          fullWidth ? "" : "sm:w-auto sm:min-h-[32px]"
+        } ${open ? "border-ink-600 ring-1 ring-ink-600" : "border-line-strong"}`}
       >
-        <Icon name="calendar" size={15} className="text-mute" />
-        {label && <span className="text-mute">{label}</span>}
-        <span className="font-medium">{describePeriod(value)}</span>
+        <Icon name="calendar" size={15} className="shrink-0 text-mute" />
+        {label ? <span className="text-mute">{label}</span> : null}
+        <span className="font-medium text-ink-900">{describePeriod(value)}</span>
         <Icon name="chevronDown" size={14} className={`ml-auto text-mute transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 

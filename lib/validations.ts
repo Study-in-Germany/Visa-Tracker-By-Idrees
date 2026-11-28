@@ -2,17 +2,33 @@ import { z } from "zod";
 import { CONSULATES, VISA_STATUS_ORDER } from "@/lib/constants";
 import { parseCalendarDay } from "@/lib/period";
 
-const optionalStr = z.string().max(500).optional().or(z.literal(""));
+const optionalStr = z.string().trim().max(500).optional().or(z.literal(""));
 const optionalDate = z
   .string()
+  .trim()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid date")
   .refine((v) => parseCalendarDay(v) !== null, "Enter a real date between 2000 and 2100")
   .optional()
   .or(z.literal(""));
 
+const plausibleApplicantDate = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid date (YYYY-MM-DD)")
+  .refine((v) => {
+    const parsed = parseCalendarDay(v);
+    if (!parsed) return false;
+    const min = Date.UTC(2018, 0, 1);
+    const max = Date.now() + 366 * 86_400_000;
+    const t = parsed.getTime();
+    return t >= min && t <= max;
+  }, "Enter a realistic date (2018 or later, not more than 1 year ahead)")
+  .optional()
+  .or(z.literal(""));
+
 export const submitApplicantSchema = z.object({
-  name: z.string().min(1, "Name is required").max(120),
-  email: z.string().email().optional().or(z.literal("")),
+  name: z.string().trim().min(1, "Name is required").max(120),
+  email: z.string().trim().email("Enter a valid email address").max(120).optional().or(z.literal("")),
   gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional(),
   city: optionalStr,
   province: optionalStr,
@@ -24,13 +40,14 @@ export const submitApplicantSchema = z.object({
   waitingListCategory: optionalStr,
   sourceOfInformation: optionalStr,
   additionalDocuments: optionalStr,
-  waitingListDate: optionalDate,
-  submissionInviteDate: optionalDate,
-  documentSubmissionDate: optionalDate,
-  correctionRequestDate: optionalDate,
-  appointmentDate: optionalDate,
-  interviewDate: optionalDate,
-  decisionDate: optionalDate,
+  waitingListDate: plausibleApplicantDate,
+  submissionInviteDate: plausibleApplicantDate,
+  documentSubmissionDate: plausibleApplicantDate,
+  correctionRequestDate: plausibleApplicantDate,
+  correctionSubmittedDate: plausibleApplicantDate,
+  appointmentDate: plausibleApplicantDate,
+  interviewDate: plausibleApplicantDate,
+  decisionDate: plausibleApplicantDate,
   isAnonymous: z.boolean().optional(),
 });
 
@@ -209,4 +226,47 @@ export const milestoneSchema = z.object({
   milestone: z.enum(["waitingListDate", "submissionInviteDate", "documentSubmissionDate", "correctionRequestDate", "correctionSubmittedDate", "appointmentDate", "interviewDate", "decisionDate"]),
   date: requiredDate.nullable(),
   note: z.string().trim().max(300).optional().or(z.literal("")),
+});
+
+// ───────────── OTP & Email preferences ─────────────
+
+export const otpRequestSchema = z.object({
+  identifier: z.string().trim().min(2, "Enter your email or Tracking ID").max(120),
+  purpose: z.enum(["LOGIN", "RECOVERY"]),
+});
+
+export const otpVerifySchema = z.object({
+  identifier: z.string().trim().min(2).max(120),
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit verification code"),
+  purpose: z.enum(["LOGIN", "RECOVERY"]),
+});
+
+export const otpSelectSchema = z.object({
+  selectionToken: z.string().min(10).max(2000),
+  applicantId: z.string().min(4).max(60),
+});
+
+export const recoveryResetSchema = z.object({
+  recoveryToken: z.string().min(10).max(2000),
+  applicantId: z.string().min(4).max(60),
+  newAccessCode: z
+    .string()
+    .trim()
+    .min(8, "Access code must be at least 8 characters")
+    .max(64, "Access code is too long")
+    .regex(/^[A-Za-z0-9-]+$/, "Use only letters, numbers, and hyphens"),
+});
+
+export const emailVerificationRequestSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address").max(120),
+});
+
+export const emailVerificationConfirmSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address").max(120),
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit verification code"),
+});
+
+export const notificationPrefsSchema = z.object({
+  notifyAnnouncements: z.boolean().optional(),
+  notifyStatusUpdates: z.boolean().optional(),
 });

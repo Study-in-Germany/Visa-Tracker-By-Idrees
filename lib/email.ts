@@ -1,36 +1,55 @@
-import { Resend } from "resend";
-import { VISA_STATUS_LABELS } from "@/lib/constants";
+export {
+  isSmtpConfigured,
+  verifySmtpConnection,
+  sendMailWithRetry,
+} from "./email/transporter";
 
+export {
+  enqueueEmailJob,
+  sendAndRecordImmediateEmail,
+  enqueueAnnouncementEmails,
+  processEmailQueue,
+  notifyApplicantSubmission,
+  notifyApplicantApproval,
+  notifyApplicantStatusUpdate,
+} from "./email/queue";
+
+export {
+  loginOtpEmail,
+  recoveryOtpEmail,
+  emailVerificationOtpEmail,
+  accessCodeResetConfirmationEmail,
+  emailChangedSecurityAlertEmail,
+  submissionConfirmationEmail,
+  approvalNotificationEmail,
+  statusUpdateEmail,
+  announcementEmail,
+} from "./email/templates";
+
+import { notifyApplicantStatusUpdate } from "./email/queue";
+
+/** Backward-compatible helper used by existing applicant PATCH endpoints. */
 export async function sendStatusUpdateEmail(opts: {
+  applicantId?: string;
+  publicId?: string;
   to: string | null | undefined;
   name: string;
   visaStatus: string;
   note?: string | null;
+  notifyStatusUpdates?: boolean;
+  unsubscribeToken?: string | null;
 }) {
-  if (!opts.to) return; // no email on file, nothing to send
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM || "Visa Tracker <onboarding@resend.dev>";
-  if (!apiKey) return; // notifications disabled — app still works fine without this
-
-  const resend = new Resend(apiKey);
-  const label = VISA_STATUS_LABELS[opts.visaStatus] || opts.visaStatus;
-
-  try {
-    await resend.emails.send({
-      from,
+  if (!opts.to || opts.notifyStatusUpdates === false) return;
+  if (opts.applicantId && opts.publicId) {
+    await notifyApplicantStatusUpdate({
+      applicantId: opts.applicantId,
+      publicId: opts.publicId,
       to: opts.to,
-      subject: `Visa Tracker update: ${label}`,
-      html: `
-        <div style="font-family:sans-serif;line-height:1.5">
-          <h2 style="color:#0f1b3d">Status update for ${opts.name}</h2>
-          <p>Your tracked application status changed to:</p>
-          <p style="font-size:18px;font-weight:bold;color:#d4af37">${label}</p>
-          ${opts.note ? `<p><em>${opts.note}</em></p>` : ""}
-          <p style="color:#888;font-size:12px">You're receiving this because you submitted an entry to Visa Tracker and provided this email for updates.</p>
-        </div>
-      `,
+      name: opts.name,
+      visaStatus: opts.visaStatus,
+      note: opts.note,
+      notifyStatusUpdates: opts.notifyStatusUpdates,
+      unsubscribeToken: opts.unsubscribeToken,
     });
-  } catch (err) {
-    console.error("Email send failed:", err);
   }
 }

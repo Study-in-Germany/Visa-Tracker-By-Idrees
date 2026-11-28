@@ -1,13 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { submitApplicantSchema } from "@/lib/validations";
 import { getSession } from "@/lib/auth";
-import { generateAccessCode } from "@/lib/ids";
+import { deriveInitialVisaStatus, generateAccessCode } from "@/lib/ids";
 import { createApplicantWithTrackingId } from "@/lib/create-applicant";
 import bcrypt from "bcryptjs";
 import { waitingListWhere } from "@/lib/period";
 import { TEAM_PUBLIC_ID } from "@/lib/listings";
 import { VISA_STATUS_LABELS, CONSULATES } from "@/lib/constants";
+import { notifyApplicantSubmission } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
+import { invalidateForecastCache } from "@/lib/forecasting/forecast-service";
+
+const globalForSubmit = globalThis as unknown as {
+  submitIdempotencyCache?: Map<string, { id: string; publicId: string; emailConfirmationSent: boolean; at: number }>;
+  submitFingerprintCache?: Map<string, number>;
+};
+const idempotencyCache =
+  globalForSubmit.submitIdempotencyCache ??
+  (globalForSubmit.submitIdempotencyCache = new Map());
+const recentFingerprintCache =
+  globalForSubmit.submitFingerprintCache ??
+  (globalForSubmit.submitFingerprintCache = new Map());
+
+function pruneMaps() {
+  const now = Date.now();
+  for (const [k, v] of idempotencyCache) {
+    if (now - v.at > 10 * 60_000) idempotencyCache.delete(k);
+  }
+  for (const [k, at] of recentFingerprintCache) {
+    if (now - at > 25_000) recentFingerprintCache.delete(k);
+  }
+}
 
 const DATE_FIELDS = ["waitingListDate", "submissionInviteDate", "documentSubmissionDate", "correctionRequestDate", "correctionSubmittedDate", "appointmentDate", "interviewDate", "decisionDate"] as const;
 
@@ -98,30 +123,30 @@ export async function GET(req: NextRequest) {
   const [total, applicants] = await Promise.all([
     prisma.applicant.count({ where }),
     prisma.applicant.findMany({
-    where,
-    orderBy,
-    ...(page ? { skip: (page - 1) * pageSize, take: pageSize } : {}),
-    select: {
-      id: true,
-      publicId: true,
-      name: true,
-      university: true,
-      program: true,
-      intake: true,
-      consulate: true,
-      waitingListDate: true,
-      submissionInviteDate: true,
-      documentSubmissionDate: true,
-      correctionRequestDate: true,
-      correctionSubmittedDate: true,
-      appointmentDate: true,
-      interviewDate: true,
-      decisionDate: true,
-      visaStatus: true,
-      approval: true,
-      isAnonymous: true,
-      createdAt: true,
-    },
+      where,
+      orderBy,
+      ...(page ? { skip: (page - 1) * pageSize, take: pageSize } : {}),
+      select: {
+        id: true,
+        publicId: true,
+        name: true,
+        university: true,
+        program: true,
+        intake: true,
+        consulate: true,
+        waitingListDate: true,
+        submissionInviteDate: true,
+        documentSubmissionDate: true,
+        correctionRequestDate: true,
+        correctionSubmittedDate: true,
+        appointmentDate: true,
+        interviewDate: true,
+        decisionDate: true,
+        visaStatus: true,
+        approval: true,
+        isAnonymous: true,
+        createdAt: true,
+      },
     }),
   ]);
 
@@ -144,6 +169,30 @@ export async function GET(req: NextRequest) {
 // Returns the new public tracking ID + a private access code (shown once)
 // so the applicant can log in later to manage their own entry.
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const idemKey = req.headers.get("idempotency-key")?.trim().slice(0, 80) || "";
+
+  pruneMaps();
+  if (idemKey) {
+    const existingHit = idempotencyCache.get(`${ip}:${idemKey}`);
+    if (existingHit) {
+      return NextResponse.json(
+        {
+          id: existingHit.id,
+          publicId: existingHit.publicId,
+          duplicate: true,
+          emailConfirmationSent: existingHit.emailConfirmationSent,
+          message: "Your entry was already recorded under this Tracking ID.",
+        },
+        { status: 200 }
+      );
+    }
+  }
+
+  if (!rateLimit(`submit-applicant-ip:${ip}`, 10, 10 * 60_000)) {
+    return NextResponse.json({ error: "Too many submissions from your network. Please wait a few minutes." }, { status: 429 });
+  }
+
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
 
@@ -153,50 +202,89 @@ export async function POST(req: NextRequest) {
   }
   const data = parsed.data;
 
+  // Prevent accidental double-tap duplicate submissions within 20 seconds
+  const fingerprint = `${ip}:${data.name.toLowerCase()}:${data.consulate}:${data.waitingListDate || ""}`;
+  if (!idemKey && recentFingerprintCache.has(fingerprint)) {
+    return NextResponse.json(
+      { error: "This entry was just submitted. Wait a moment before submitting again." },
+      { status: 409 }
+    );
+  }
+
+  const initialStatus = deriveInitialVisaStatus(data);
   const accessCode = generateAccessCode();
-  const accessCodeHash = await bcrypt.hash(accessCode, 10);
+  const accessCodeHash = await bcrypt.hash(accessCode, 12);
 
   let applicant;
   try {
     applicant = await createApplicantWithTrackingId({
-    accessCodeHash,
-    name: data.name,
-    email: data.email || null,
-    gender: (data.gender as any) || null,
-    city: data.city || null,
-    province: data.province || null,
-    university: data.university || null,
-    program: data.program || null,
-    intake: data.intake || null,
-    visaType: data.visaType || null,
-    consulate: data.consulate,
-    waitingListCategory: data.waitingListCategory || null,
-    sourceOfInformation: data.sourceOfInformation || null,
-    additionalDocuments: data.additionalDocuments || null,
-    waitingListDate: data.waitingListDate ? new Date(data.waitingListDate) : null,
-    submissionInviteDate: data.submissionInviteDate ? new Date(data.submissionInviteDate) : null,
-    documentSubmissionDate: data.documentSubmissionDate ? new Date(data.documentSubmissionDate) : null,
-    correctionRequestDate: data.correctionRequestDate ? new Date(data.correctionRequestDate) : null,
-    appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
-    interviewDate: data.interviewDate ? new Date(data.interviewDate) : null,
-    decisionDate: data.decisionDate ? new Date(data.decisionDate) : null,
-    isAnonymous: data.isAnonymous ?? false,
-    approval: "PENDING_REVIEW",
-    visaStatus: "WAITING_LIST",
-    history: {
-      create: [{ visaStatus: "WAITING_LIST", note: "Entry submitted by applicant" }],
-    },
+      accessCodeHash,
+      name: data.name,
+      email: data.email ? data.email.trim().toLowerCase() : null,
+      gender: (data.gender as any) || null,
+      city: data.city || null,
+      province: data.province || null,
+      university: data.university || null,
+      program: data.program || null,
+      intake: data.intake || null,
+      visaType: data.visaType || null,
+      consulate: data.consulate,
+      waitingListCategory: data.waitingListCategory || null,
+      sourceOfInformation: data.sourceOfInformation || null,
+      additionalDocuments: data.additionalDocuments || null,
+      waitingListDate: data.waitingListDate ? new Date(data.waitingListDate) : null,
+      submissionInviteDate: data.submissionInviteDate ? new Date(data.submissionInviteDate) : null,
+      documentSubmissionDate: data.documentSubmissionDate ? new Date(data.documentSubmissionDate) : null,
+      correctionRequestDate: data.correctionRequestDate ? new Date(data.correctionRequestDate) : null,
+      correctionSubmittedDate: data.correctionSubmittedDate ? new Date(data.correctionSubmittedDate) : null,
+      appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
+      interviewDate: data.interviewDate ? new Date(data.interviewDate) : null,
+      decisionDate: data.decisionDate ? new Date(data.decisionDate) : null,
+      isAnonymous: data.isAnonymous ?? false,
+      approval: "PENDING_REVIEW",
+      visaStatus: initialStatus,
+      history: {
+        create: [{ visaStatus: initialStatus, note: "Entry submitted by applicant" }],
+      },
     });
   } catch (err) {
     console.error("Submit failed:", err);
     return NextResponse.json({ error: "We could not save your entry right now. Please try again in a moment." }, { status: 500 });
   }
 
+  let emailConfirmationSent = false;
+  if (applicant.email) {
+    const res = await notifyApplicantSubmission({
+      id: applicant.id,
+      publicId: applicant.publicId,
+      name: applicant.name,
+      email: applicant.email,
+      consulate: applicant.consulate,
+    });
+    emailConfirmationSent = res.delivered;
+  }
+
+  recentFingerprintCache.set(fingerprint, Date.now());
+  if (idemKey) {
+    idempotencyCache.set(`${ip}:${idemKey}`, {
+      id: applicant.id,
+      publicId: applicant.publicId,
+      emailConfirmationSent,
+      at: Date.now(),
+    });
+  }
+
+  invalidateForecastCache();
+  revalidatePath("/admin");
+  revalidatePath("/admin/applicants");
+
   return NextResponse.json(
     {
-      applicant: (({ accessCodeHash: _hash, ...safe }) => safe)(applicant),
+      id: applicant.id,
+      applicant: (({ accessCodeHash: _hash, unsubscribeToken: _unsub, sessionVersion: _sv, disabledAt: _da, ...safe }) => safe)(applicant),
       publicId: applicant.publicId,
       accessCode,
+      emailConfirmationSent,
       message:
         "Save your Tracking ID and Access Code — you'll need both to log in and manage this entry later. They will not be shown again.",
     },

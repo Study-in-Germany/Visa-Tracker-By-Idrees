@@ -97,9 +97,9 @@ export default function GlobalSearch() {
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
         placeholder="Search ID, university, embassy…"
-        aria-label="Search applicants"
+        aria-label="Search My Journey applicants"
         autoComplete="off"
-        className="h-10 w-full rounded-xl border border-line-strong bg-paper-raised pl-9 pr-8 text-[13px] placeholder:text-mute focus:border-ink-600 focus:ring-1 focus:ring-ink-600 [&::-webkit-search-cancel-button]:hidden"
+        className="h-9 w-full rounded-lg border border-line-strong bg-paper-raised pl-9 pr-8 text-[13px] placeholder:text-mute focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 [&::-webkit-search-cancel-button]:hidden"
       />
       <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-line px-1.5 text-[10px] text-mute sm:block">/</kbd>
 
@@ -116,7 +116,7 @@ export default function GlobalSearch() {
               <ul role="listbox" aria-label="Matches">
                 {rows.map((r, i) => (
                   <li key={r.id} role="option" aria-selected={i === cursor}>
-                    <Link href={hrefFor(r)} onClick={() => { close(); setText(""); }} className={`flex items-center justify-between gap-3 rounded-md px-2.5 py-2 ${i === cursor ? "bg-paper-sunk" : "hover:bg-paper-sunk"}`}>
+                    <Link href={hrefFor(r)} onClick={() => { close(); setText(""); }} className={`flex items-center justify-between gap-3 rounded-md px-2.5 py-2 ${i === cursor ? "bg-[rgb(var(--hover))]" : "hover:bg-[rgb(var(--hover))]"}`}>
                       <span className="min-w-0">
                         <span className="block font-mono text-[13px] font-medium">{r.publicId}</span>
                         <span className="block truncate text-xs text-mute">
@@ -128,7 +128,7 @@ export default function GlobalSearch() {
                   </li>
                 ))}
               </ul>
-              <Link href={seeAll} onClick={() => { close(); setText(""); }} className="mt-1 flex items-center justify-between rounded-md border-t border-line px-2.5 py-2 text-xs font-medium text-ink-800 hover:bg-paper-sunk">
+              <Link href={seeAll} onClick={() => { close(); setText(""); }} className="mt-1 flex items-center justify-between rounded-md border-t border-line px-2.5 py-2 text-xs font-medium text-ink-800 hover:bg-[rgb(var(--hover))]">
                 <span>See all {count.toLocaleString("en-US")} {count === 1 ? "result" : "results"}</span>
                 <Icon name="chevronRight" size={14} />
               </Link>

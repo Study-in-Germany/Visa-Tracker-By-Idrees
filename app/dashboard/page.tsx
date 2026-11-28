@@ -3,159 +3,270 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Greeting from "@/components/ui/Greeting";
-import Panel from "@/components/ui/Panel";
-import StatCard from "@/components/ui/StatCard";
-import Icon from "@/components/ui/Icon";
-import { Chip } from "@/components/ui/Chip";
-import { ErrorState, LoadingBlock } from "@/components/ui/States";
+import ConfidenceBars from "@/components/data-display/ConfidenceBars";
+import Sparkline from "@/components/data-display/Sparkline";
 import StatusBadge from "@/components/StatusBadge";
 import MilestoneEditor from "@/components/tracker/MilestoneEditor";
-import { invalidateApi } from "@/hooks/useApi";
-import { useApi } from "@/hooks/useApi";
+import { Chip } from "@/components/ui/Chip";
+import Icon from "@/components/ui/Icon";
+import Panel from "@/components/ui/Panel";
+import { DashboardPageSkeleton } from "@/components/ui/Skeletons";
+import StatCard from "@/components/ui/StatCard";
+import { ErrorState } from "@/components/ui/States";
+import TransitJourneySkeleton from "@/components/visa/journey/TransitJourneySkeleton";
+import TransitVisaJourney from "@/components/visa/journey/TransitVisaJourney";
+import { invalidateApi, useApi } from "@/hooks/useApi";
+import { useSession } from "@/hooks/useSession";
+import { adaptDashboardKpis, adaptTransitJourney } from "@/lib/analytics/adapters";
+import { ACTIVE_STATUSES, APPROVAL_COLORS, APPROVAL_LABELS, JOURNEY_STAGES } from "@/lib/constants";
 import { fmtDate } from "@/lib/format";
-import { APPROVAL_COLORS, APPROVAL_LABELS, ACTIVE_STATUSES, JOURNEY_STAGES } from "@/lib/constants";
+import type { PersonalForecastResult } from "@/lib/forecasting/types";
 
 const DAY = 86_400_000;
-const daysBetween = (a: string, b: string | Date) => Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / DAY));
+const daysBetween = (a: string, b: string | Date) =>
+  Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / DAY));
 
 function Detail({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-0">
+    <div className="flex items-baseline justify-between gap-4 border-b border-line py-1.5 last:border-0">
       <dt className="shrink-0 text-mute">{label}</dt>
-      <dd className="min-w-0 break-words text-right font-medium">{value || <span className="font-normal text-mute">—</span>}</dd>
+      <dd className="min-w-0 break-words text-right font-medium">
+        {value || <span className="font-normal text-mute">—</span>}
+      </dd>
     </div>
   );
 }
 
 export default function MyJourneyPage() {
   const router = useRouter();
+  const session = useSession();
   const { data, error, loading, reload } = useApi<{ applicant: any }>("/api/applicant/me");
+  const hasWaitingListDate = Boolean(data?.applicant?.waitingListDate);
+  const {
+    data: fcData,
+    error: fcError,
+    loading: fcLoading,
+    reload: reloadForecast,
+  } = useApi<{
+    forecast?: PersonalForecastResult;
+    progressionHistory?: { date: string; frontierDate: string; frontierMs?: number }[];
+    missingWaitingListDate?: boolean;
+  }>(hasWaitingListDate ? "/api/applicant/me/forecast" : null);
 
   useEffect(() => {
     if (error?.status === 401) router.push("/login");
   }, [error, router]);
 
-  if (loading && !data) return <LoadingBlock />;
+  if (loading && !data) return <DashboardPageSkeleton />;
   if (error) return <div className="card"><ErrorState error={error} onRetry={reload} /></div>;
   const a = data?.applicant;
   if (!a) return null;
 
+  const forecast = fcData?.forecast ?? null;
+  const fcPending = hasWaitingListDate && fcLoading && !forecast && !fcError;
   const stages = JOURNEY_STAGES.map((s) => ({ ...s, date: a[s.key] as string | null }));
   const done = stages.filter((s) => s.date).length;
-  const nextIdx = stages.findIndex((s) => !s.date);
   const active = ACTIVE_STATUSES.includes(a.visaStatus);
-  const waitingDays = a.waitingListDate ? daysBetween(a.waitingListDate, active ? new Date() : a.decisionDate || new Date()) : null;
-  const lastUpdateDays = daysBetween(a.updatedAt, new Date());
+  const waitingDays = a.waitingListDate
+    ? daysBetween(a.waitingListDate, active ? new Date() : a.decisionDate || new Date())
+    : null;
 
-  // days since the previous recorded stage
-  let prev: string | null = null;
-  const gaps = stages.map((s) => {
-    if (!s.date) return null;
-    const gap = prev ? daysBetween(prev, s.date) : null;
-    prev = s.date;
-    return gap;
+  const kpis = adaptDashboardKpis(a, forecast, fcData?.progressionHistory ?? [], {
+    active,
+    waitingDays,
+    hasWaitingListDate,
+    forecastError: Boolean(fcError),
   });
 
-  return (
-    <>
-      <Greeting
-        name={String(a.name || "there").split(" ")[0]}
-        subtitle={[a.publicId, a.university, a.consulate && `${a.consulate} embassy`].filter(Boolean).join(" · ")}
-        actions={
-          <>
-            <StatusBadge status={a.visaStatus} />
-            <Link href="/dashboard/information" className="btn-secondary !min-h-[32px]"><Icon name="edit" size={13} /> Edit details</Link>
-          </>
-        }
-      />
+  const journeyView = forecast ? adaptTransitJourney(forecast, a) : null;
 
-      <section aria-label="Summary" className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon="clock" tone="warn" format="days" label={active ? "Waiting so far" : "Time in process"} value={waitingDays} hint={a.waitingListDate ? `since ${fmtDate(a.waitingListDate)}` : "add your waiting-list date"} />
-        <StatCard icon="checkCircle" tone="good" label="Stages recorded" value={done} hint={`of ${stages.length}`} />
-        <StatCard icon="send" tone="sage" label="Status updates" value={a.history?.length ?? 0} />
-        <StatCard icon="edit" tone="neutral" label="Last edited (days ago)" value={lastUpdateDays} />
+  const handleMilestoneSaved = () => {
+    invalidateApi("/api/applicant/me");
+    invalidateApi("/api/applicant/me/forecast");
+    invalidateApi("/api/intelligence");
+    invalidateApi("/api/session");
+    session.refresh();
+    reload();
+    reloadForecast();
+  };
+
+  const scenarioAction = (
+    <Link href="/calculator" className="btn-secondary !min-h-[30px] text-xs">
+      <Icon name="calculator" size={13} /> Scenario calculator
+    </Link>
+  );
+
+  return (
+    <div className="space-y-3">
+      {/* 1. Existing statistics cards with clean internal visuals (outer design preserved) */}
+      <section aria-label="Journey summary" className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <StatCard
+          icon="clock"
+          format="days"
+          label={kpis.waitingTime.label}
+          value={kpis.waitingTime.days}
+          hint={kpis.waitingTime.secondary}
+        />
+        <StatCard
+          icon="queue"
+          label={kpis.queueFrontier.label}
+          value={kpis.queueFrontier.value}
+          hint={kpis.queueFrontier.secondary}
+          sparkline={
+            kpis.queueFrontier.sparklinePoints.length >= 3 ? (
+              <Sparkline
+                points={kpis.queueFrontier.sparklinePoints}
+                width={76}
+                height={26}
+                ariaLabel="Queue frontier movement over time"
+              />
+            ) : undefined
+          }
+          loading={fcPending}
+        />
+        <StatCard
+          icon="calendar"
+          label={kpis.nextMilestone.label}
+          value={kpis.nextMilestone.value}
+          hint={kpis.nextMilestone.secondary}
+          loading={fcPending}
+        />
+        <StatCard
+          icon="shield"
+          label={kpis.confidence.label}
+          value={kpis.confidence.value}
+          hint={kpis.confidence.secondary}
+          sparkline={
+            forecast ? (
+              <ConfidenceBars
+                bars={kpis.confidence.bars}
+                label={`Forecast confidence: ${kpis.confidence.value}`}
+              />
+            ) : undefined
+          }
+          loading={fcPending}
+        />
       </section>
 
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* 2. Connected transit map personal visa journey */}
+      {fcPending ? (
+        <TransitJourneySkeleton />
+      ) : !hasWaitingListDate || fcData?.missingWaitingListDate ? (
         <Panel
-          title="Journey"
-          description={nextIdx >= 0 ? `Next to record: ${stages[nextIdx].label}` : "Every stage is recorded"}
-          actions={<span className="rounded-md bg-paper-sunk px-2 py-1 text-xs font-semibold tabular-nums">{done}/{stages.length}</span>}
+          title="Your visa journey"
+          description="Add your waiting-list joining date below to generate a personalized estimate."
+          actions={scenarioAction}
         >
-          <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-paper-sunk">
-            <div className="h-full rounded-full bg-clay-500 transition-all" style={{ width: `${(done / stages.length) * 100}%` }} />
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-line-strong bg-paper-sunk px-4 py-3 text-xs">
+            <span className="text-ink-700">Waiting-list joining date is not set on your record yet.</span>
+            <MilestoneEditor
+              milestone="waitingListDate"
+              label="Waiting List"
+              date={a.waitingListDate}
+              onSaved={handleMilestoneSaved}
+            />
           </div>
+        </Panel>
+      ) : fcError ? (
+        <Panel title="Your visa journey" actions={scenarioAction}>
+          <ErrorState error={fcError} onRetry={reloadForecast} />
+        </Panel>
+      ) : journeyView ? (
+        <TransitVisaJourney
+          data={journeyView}
+          onMilestoneSaved={handleMilestoneSaved}
+        />
+      ) : (
+        <Panel title="Your visa journey" actions={scenarioAction}>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-line-strong bg-paper-sunk px-4 py-3 text-xs">
+            <span className="text-ink-700">Not enough cohort data to generate an estimate yet.</span>
+            <button type="button" onClick={reloadForecast} className="btn-secondary !min-h-[30px] text-xs">
+              Retry
+            </button>
+          </div>
+        </Panel>
+      )}
 
-          <ol className="space-y-1.5">
-            {stages.map((s, i) => {
-              const isNext = i === nextIdx;
-              return (
-                <li
-                  key={s.key}
-                  className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2.5 ${
-                    s.date ? "border-line bg-paper-raised" : isNext ? "border-clay-400/50 bg-clay-50/60" : "border-dashed border-line-strong bg-transparent"
-                  }`}
-                >
-                  <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold ${s.date ? "bg-emerald-600 text-white" : isNext ? "bg-clay-500 text-white" : "bg-paper-sunk text-mute"}`}>
-                    {s.date ? <Icon name="check" size={12} strokeWidth={3} /> : i + 1}
-                  </span>
-                  <span className={`min-w-0 flex-1 truncate text-[13px] ${s.date ? "font-medium" : isNext ? "font-medium text-ink-900" : "text-mute"}`}>{s.label}</span>
-                  <span className="flex shrink-0 items-center gap-2 text-right">
-                    {gaps[i] !== null && gaps[i]! > 0 && <span className="hidden rounded bg-paper-sunk px-1.5 py-0.5 text-[11px] tabular-nums text-mute sm:inline">+{gaps[i]} d</span>}
-                    <span className={`text-[13px] tabular-nums ${s.date ? "" : "text-mute"}`}>{s.date ? fmtDate(s.date) : isNext ? "Next" : "Not yet"}</span>
-                  </span>
-                  <MilestoneEditor milestone={s.key} label={s.label} date={s.date} onSaved={() => { invalidateApi("/api/applicant/me"); reload(); }} />
-                </li>
-              );
-            })}
-          </ol>
+      {/* 3, 4 & 5. Actual milestone management, Profile & visibility, Status history */}
+      <div className="grid items-start gap-3 lg:grid-cols-12">
+        <Panel
+          title="Update actual milestones"
+          description="Recording a milestone immediately updates your remaining estimate."
+          className="lg:col-span-6"
+          actions={<span className="text-[11px] font-semibold tabular-nums text-mute">{done} recorded</span>}
+        >
+          <ul className="grid gap-1.5 sm:grid-cols-2">
+            {stages.map((s) => (
+              <li
+                key={s.key}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-paper-sunk/60 px-2.5 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-ink-900">{s.label}</p>
+                  <p className={`text-[11px] tabular-nums ${s.date ? "text-emerald-700 dark:text-emerald-400" : "text-mute"}`}>
+                    {s.date ? fmtDate(s.date) : "Not recorded"}
+                  </p>
+                </div>
+                <MilestoneEditor milestone={s.key} label={s.label} date={s.date} onSaved={handleMilestoneSaved} />
+              </li>
+            ))}
+          </ul>
         </Panel>
 
-        <aside className="space-y-3">
-          <Panel title="Profile" actions={<Link href="/dashboard/information" className="text-xs font-medium text-clay-600 hover:underline">Edit</Link>}>
-            <dl className="text-[13px]">
+        <div className="space-y-3 lg:col-span-3">
+          <Panel
+            title="Profile & visibility"
+            actions={
+              <Link href="/dashboard/information" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+                Edit details
+              </Link>
+            }
+          >
+            <dl className="text-xs">
               <Detail label="University" value={a.university} />
               <Detail label="Program" value={a.program} />
               <Detail label="Intake" value={a.intake} />
-              <Detail label="Visa type" value={a.visaType} />
               <Detail label="Embassy" value={a.consulate} />
-              <Detail label="Province" value={a.province} />
+              <Detail label="Name" value={a.isAnonymous ? "Hidden publicly" : "Shown publicly"} />
             </dl>
-          </Panel>
-
-          <Panel title="Visibility">
-            <div className="space-y-2.5 text-[13px]">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-mute">Review</span>
-                <Chip className={APPROVAL_COLORS[a.approval]}>{APPROVAL_LABELS[a.approval] || a.approval}</Chip>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-mute">Your name</span>
-                <span className="font-medium">{a.isAnonymous ? "Hidden publicly" : "Shown publicly"}</span>
-              </div>
+            <div className="mt-2.5 flex items-center justify-between border-t border-line pt-2 text-xs">
+              <span className="text-mute">Review</span>
+              <Chip className={APPROVAL_COLORS[a.approval]}>{APPROVAL_LABELS[a.approval] || a.approval}</Chip>
             </div>
-            {a.approval === "APPROVED" ? (
-              <Link href={`/tracker/${a.publicId}`} className="btn-secondary mt-3 w-full !min-h-[32px]">
-                View public page <Icon name="external" size={12} />
+            {a.approval === "APPROVED" && (
+              <Link href={`/tracker/${a.publicId}`} className="btn-secondary mt-2.5 w-full !min-h-[32px] text-xs">
+                Public page <Icon name="external" size={12} />
               </Link>
-            ) : (
-              <p className="mt-3 text-xs text-mute">Your public page appears once an admin approves your entry.</p>
             )}
           </Panel>
+        </div>
 
-          <Link href="/dashboard/updates" className="card flex items-center justify-between p-3.5 transition-colors hover:bg-card">
-            <span className="flex items-center gap-2.5">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-paper-sunk text-ink-700"><Icon name="bell" size={16} /></span>
-              <span>
-                <span className="block text-[13px] font-semibold">Status history</span>
-                <span className="block text-xs text-mute">{a.history?.length ?? 0} updates</span>
-              </span>
-            </span>
-            <Icon name="chevronRight" size={16} className="text-mute" />
-          </Link>
-        </aside>
+        <Panel
+          title="Status history"
+          className="lg:col-span-3"
+          actions={
+            <Link href="/dashboard/updates" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+              All ({a.history?.length ?? 0})
+            </Link>
+          }
+        >
+          {a.history?.length ? (
+            <ul className="divide-y divide-line text-xs">
+              {a.history.slice(-4).reverse().map((h: any) => (
+                <li key={h.id} className="py-2 first:pt-0 last:pb-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <StatusBadge status={h.visaStatus} />
+                    <span className="shrink-0 text-[11px] tabular-nums text-mute">{fmtDate(h.occurredAt)}</span>
+                  </div>
+                  {h.note && <p className="mt-1 truncate text-[11px] text-mute">{h.note}</p>}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-mute">No status updates logged yet.</p>
+          )}
+        </Panel>
       </div>
-    </>
+    </div>
   );
 }

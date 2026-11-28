@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Panel from "@/components/ui/Panel";
-import { EmptyState, ErrorState, LoadingBlock } from "@/components/ui/States";
+import { EmptyState, ErrorState } from "@/components/ui/States";
+import { DirectoryListSkeleton } from "@/components/ui/Skeletons";
 import StatusBadge from "@/components/StatusBadge";
 import { useApi } from "@/hooks/useApi";
 import { fmtDate } from "@/lib/format";
@@ -17,13 +18,13 @@ export default function MyUpdatesPage() {
     if (error?.status === 401) router.push("/login");
   }, [error, router]);
 
-  if (loading && !data) return <LoadingBlock />;
+  if (loading && !data) return <DirectoryListSkeleton cards={4} />;
   if (error) return <div className="card"><ErrorState error={error} onRetry={reload} /></div>;
   const history: any[] = data?.applicant?.history ?? [];
 
   return (
     <>
-      <PageHeader eyebrow="My entry" title="Status history" />
+      <PageHeader title="My updates" />
       <Panel>
         {history.length === 0 ? (
           <EmptyState title="No updates yet" hint="Changes to your visa status will be listed here." />

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { submitApplicantSchema } from "@/lib/validations";
 import { generateAccessCode } from "@/lib/ids";
 import { createApplicantWithTrackingId } from "@/lib/create-applicant";
+import { invalidateForecastCache } from "@/lib/forecasting/forecast-service";
 import { apiError, forbidden, getActor, unauthorized } from "@/lib/permissions";
 import { VISA_STATUS_LABELS } from "@/lib/constants";
 import { z } from "zod";
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
   const d = parsed.data;
 
   const accessCode = generateAccessCode();
-  const accessCodeHash = await bcrypt.hash(accessCode, 10);
+  const accessCodeHash = await bcrypt.hash(accessCode, 12);
   const visaStatus = (d.visaStatus ?? "WAITING_LIST") as any;
 
   try {
@@ -42,6 +44,13 @@ export async function POST(req: NextRequest) {
       approval: d.approval ?? "APPROVED", visaStatus,
       history: { create: [{ visaStatus, note: "Added by an administrator" }] },
     });
+    invalidateForecastCache();
+    revalidatePath("/");
+    revalidatePath("/tracker");
+    revalidatePath("/analytics");
+    revalidatePath("/about");
+    revalidatePath("/admin");
+    revalidatePath("/admin/applicants");
     return NextResponse.json({ id: created.id, publicId: created.publicId, accessCode }, { status: 201 });
   } catch (err) {
     console.error("Admin create applicant failed:", err);

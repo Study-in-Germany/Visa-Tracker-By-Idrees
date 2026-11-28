@@ -7,24 +7,55 @@ import { apiFetch, ApiError } from "@/lib/api";
 // last result immediately and refreshes it in the background. In-flight requests are shared.
 const cache = new Map<string, { data: unknown; at: number }>();
 const inflight = new Map<string, Promise<unknown>>();
+const listeners = new Set<(prefix?: string, reset?: boolean) => void>();
 const FRESH_MS = 5_000;
 const MAX_ENTRIES = 80;
+let generation = 0;
 
-function remember(url: string, data: unknown) {
+function remember(url: string, data: unknown, expectedGen: number) {
+  if (expectedGen !== generation) return;
   cache.delete(url);
   cache.set(url, { data, at: Date.now() });
   if (cache.size > MAX_ENTRIES) cache.delete(cache.keys().next().value as string);
 }
 
-/** Drop cached responses, all of them or those whose URL starts with `prefix`. Call after a mutation. */
+/** Drop cached responses and notify active mounted subscribers whose URL matches `prefix`. */
 export function invalidateApi(prefix?: string) {
-  for (const k of Array.from(cache.keys())) if (!prefix || k.startsWith(prefix)) cache.delete(k);
+  if (!prefix) generation += 1;
+  for (const k of Array.from(cache.keys())) {
+    if (!prefix || k.startsWith(prefix)) cache.delete(k);
+  }
+  for (const k of Array.from(inflight.keys())) {
+    if (!prefix || k.startsWith(prefix)) inflight.delete(k);
+  }
+  for (const fn of Array.from(listeners)) {
+    fn(prefix, false);
+  }
 }
 
-function request<T>(url: string): Promise<T> {
-  let p = inflight.get(url) as Promise<T> | undefined;
+/**
+ * Full session-boundary reset: clears all cached and in-flight data, bumps generation so
+ * stale responses from the prior session cannot repopulate state, and resets mounted hooks to null.
+ */
+export function resetApiCache() {
+  generation += 1;
+  cache.clear();
+  inflight.clear();
+  for (const fn of Array.from(listeners)) {
+    fn(undefined, true);
+  }
+}
+
+function request<T>(url: string): Promise<{ data: T; gen: number }> {
+  const reqGen = generation;
+  let p = inflight.get(url) as Promise<{ data: T; gen: number }> | undefined;
   if (!p) {
-    p = apiFetch<T>(url).then((d) => { remember(url, d); return d; }).finally(() => inflight.delete(url));
+    p = apiFetch<T>(url)
+      .then((d) => {
+        remember(url, d, reqGen);
+        return { data: d, gen: reqGen };
+      })
+      .finally(() => inflight.delete(url));
     inflight.set(url, p);
   }
   return p;
@@ -43,22 +74,62 @@ export function useApi<T = any>(url: string | null) {
   const seq = useRef(0);
 
   useEffect(() => {
+    if (url === null) {
+      setData(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+    const onInvalidate = (prefix?: string, reset?: boolean) => {
+      if (reset) {
+        seq.current += 1;
+        setData(null);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+      if (!prefix || url.startsWith(prefix)) {
+        setTick((t) => t + 1);
+      }
+    };
+    listeners.add(onInvalidate);
+    return () => {
+      listeners.delete(onInvalidate);
+    };
+  }, [url]);
+
+  useEffect(() => {
     if (url === null) return;
     const id = ++seq.current;
+    const activeGen = generation;
     const hit = cache.get(url);
     if (hit) setData(hit.data as T);
     setError(null);
-    if (hit && tick === 0 && Date.now() - hit.at < FRESH_MS) { setLoading(false); return; }
+    if (hit && tick === 0 && Date.now() - hit.at < FRESH_MS) {
+      setLoading(false);
+      return;
+    }
     setLoading(!hit);
-    if (tick > 0) { inflight.delete(url); setLoading(true); }
+    if (tick > 0) {
+      inflight.delete(url);
+      if (!hit) setLoading(true);
+    }
     request<T>(url)
-      .then((d) => id === seq.current && setData(d))
+      .then(({ data: d, gen }) => {
+        if (id === seq.current && gen === generation && activeGen === generation) {
+          setData(d);
+        }
+      })
       .catch((e) => {
-        if (id !== seq.current) return;
+        if (id !== seq.current || activeGen !== generation) return;
         setError(e instanceof ApiError ? e : new ApiError("Something went wrong.", 0));
       })
-      .finally(() => id === seq.current && setLoading(false));
-    return () => { seq.current++; };
+      .finally(() => {
+        if (id === seq.current) setLoading(false);
+      });
+    return () => {
+      seq.current++;
+    };
   }, [url, tick]);
 
   const reload = useCallback(() => setTick((t) => t + 1), []);

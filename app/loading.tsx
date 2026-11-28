@@ -1,9 +1,5 @@
-import { LogoMark } from "@/components/Logo";
+import { OverviewSkeleton } from "@/components/ui/Skeletons";
 
 export default function Loading() {
-  return (
-    <div className="grid min-h-[50vh] place-items-center" role="status" aria-label="Loading">
-      <LogoMark size={36} className="animate-pulse" />
-    </div>
-  );
+  return <OverviewSkeleton />;
 }

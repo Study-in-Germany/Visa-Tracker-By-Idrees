@@ -30,9 +30,9 @@ function Preview({ f }: { f: Form }) {
   return (
     <div className="rounded-xl border border-line bg-paper p-3.5">
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-mute">Preview</p>
-      <article className={`card p-4 ${f.pinned ? "border-l-4 border-l-clay-500" : ""}`}>
+      <article className={`card p-4 ${f.pinned ? "border-l-4 border-l-blue-600" : ""}`}>
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-          {f.pinned && <span className="inline-flex items-center gap-1 rounded-md bg-clay-100 px-1.5 py-0.5 text-clay-600"><Icon name="pin" size={11} /> Pinned</span>}
+          {f.pinned && <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-blue-700"><Icon name="pin" size={11} /> Pinned</span>}
           <span className="rounded-md bg-paper-sunk px-1.5 py-0.5 text-ink-700">{f.consulate || "All embassies"}</span>
           <span className="font-normal text-mute">Today</span>
         </div>
@@ -67,10 +67,21 @@ function Composer({ open, editing, onClose, onSaved }: { open: boolean; editing:
     setBusy(true);
     setError("");
     try {
-      await apiFetch(editing ? `/api/announcements/${editing.id}` : "/api/announcements", jsonInit(editing ? "PATCH" : "POST", { ...form, title: form.title.trim(), body: form.body.trim() }));
+      const res = await apiFetch<{ emailQueue?: { queuedCount: number; sentNow: number; remaining: number } }>(
+        editing ? `/api/announcements/${editing.id}` : "/api/announcements",
+        jsonInit(editing ? "PATCH" : "POST", { ...form, title: form.title.trim(), body: form.body.trim() })
+      );
       invalidateApi("/api/announcements");
       invalidateApi("/api/admin/overview");
-      onSaved(editing ? "Announcement updated." : "Announcement published.");
+      invalidateApi("/api/admin/email-queue");
+      if (editing) {
+        onSaved("Announcement updated.");
+      } else if (res?.emailQueue && res.emailQueue.queuedCount > 0) {
+        const q = res.emailQueue;
+        onSaved(`Announcement published. Queued ${q.queuedCount} email(s) (${q.sentNow} sent immediately${q.remaining > 0 ? `, ${q.remaining} queued for delivery` : ""}).`);
+      } else {
+        onSaved("Announcement published.");
+      }
       onClose();
     } catch (err: any) {
       setError(err?.message || "Could not save the announcement.");
@@ -88,7 +99,7 @@ function Composer({ open, editing, onClose, onSaved }: { open: boolean; editing:
       footer={
         <>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>Cancel</button>
-          <button type="submit" form="announcement-form" className="btn-gold" disabled={busy}>{busy ? "Saving…" : editing ? "Save changes" : "Publish"}</button>
+          <button type="submit" form="announcement-form" className="btn-primary" disabled={busy}>{busy ? "Saving…" : editing ? "Save changes" : "Publish"}</button>
         </>
       }
     >
@@ -120,11 +131,13 @@ function Composer({ open, editing, onClose, onSaved }: { open: boolean; editing:
 
 function AnnouncementsInner() {
   const { data, error, loading, reload } = useApi<{ announcements: Announcement[] }>("/api/announcements");
+  const emailQueue = useApi<{ smtpConfigured: boolean; smtpOk: boolean; counts: Record<string, number> }>("/api/admin/email-queue");
   const [composer, setComposer] = useState<{ open: boolean; editing: Announcement | null }>({ open: false, editing: null });
   const [del, setDel] = useState<Announcement | null>(null);
   const [filter, setFilter] = useState("all");
   const q = useSearchParams().get("q") ?? "";
   const [message, setMessage] = useState("");
+  const [processingQueue, setProcessingQueue] = useState(false);
   const all = data?.announcements ?? [];
 
   const shown = useMemo(() => {
@@ -150,12 +163,27 @@ function AnnouncementsInner() {
     } catch (e: any) { flash(e?.message || "Could not update."); }
   }
 
+  const pendingEmailCount = (emailQueue.data?.counts.PENDING ?? 0) + (emailQueue.data?.counts.FAILED ?? 0);
+
+  async function processPendingEmails() {
+    setProcessingQueue(true);
+    try {
+      const res = await apiFetch<{ processed: number; sent: number; failed: number }>("/api/admin/email-queue/process", { method: "POST" });
+      invalidateApi("/api/admin/email-queue");
+      emailQueue.reload();
+      flash(`Processed ${res.processed} queued email(s): ${res.sent} sent, ${res.failed} failed.`);
+    } catch (e: any) {
+      flash(e?.message || "Could not process email queue.");
+    } finally {
+      setProcessingQueue(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="Announcements"
-        description="Updates shown on the public Announcements page."
-        actions={<button type="button" className="btn-gold" onClick={() => setComposer({ open: true, editing: null })}><Icon name="plus" size={14} /> New announcement</button>}
+        actions={<button type="button" className="btn-primary" onClick={() => setComposer({ open: true, editing: null })}><Icon name="plus" size={14} /> New announcement</button>}
       />
 
       <section className="mb-4 grid grid-cols-3 gap-3" aria-label="Summary">
@@ -163,6 +191,17 @@ function AnnouncementsInner() {
         <Kpi icon="pin" tone="amber" label="Pinned" value={data ? pinned : undefined} />
         <Kpi icon="building" tone="blue" label="Embassy-specific" value={data ? scoped : undefined} />
       </section>
+
+      {pendingEmailCount > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-xs text-ink-800 dark:border-amber-500/30 dark:bg-amber-950/30">
+          <span>
+            <strong>{pendingEmailCount}</strong> email notification job(s) waiting for delivery or retry.
+          </span>
+          <button type="button" className="btn-secondary !min-h-[32px] text-xs" disabled={processingQueue} onClick={processPendingEmails}>
+            {processingQueue ? "Sending…" : "Process pending emails"}
+          </button>
+        </div>
+      )}
 
       {message && <div className="mb-3" role="status"><Notice tone="success">{message}</Notice></div>}
 
@@ -183,16 +222,16 @@ function AnnouncementsInner() {
           <EmptyState
             title={all.length === 0 ? "No announcements yet" : "Nothing matches"}
             hint={all.length === 0 ? "Share embassy news and tips with everyone using the tracker." : "Try a different filter or search."}
-            action={all.length === 0 ? <button type="button" className="btn-gold" onClick={() => setComposer({ open: true, editing: null })}>Write the first one</button> : undefined}
+            action={all.length === 0 ? <button type="button" className="btn-primary" onClick={() => setComposer({ open: true, editing: null })}>Write the first one</button> : undefined}
           />
         </div>
       ) : (
         <ul className="grid items-start gap-3 xl:grid-cols-2">
           {shown.map((a) => (
             <li key={a.id}>
-              <article className={`card group flex h-full flex-col p-4 ${a.pinned ? "border-l-4 border-l-clay-500" : ""}`}>
+              <article className={`card group flex h-full flex-col p-4 ${a.pinned ? "border-l-4 border-l-blue-600" : ""}`}>
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-                  {a.pinned && <span className="inline-flex items-center gap-1 rounded-md bg-clay-100 px-1.5 py-0.5 text-clay-600"><Icon name="pin" size={11} /> Pinned</span>}
+                  {a.pinned && <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-blue-700"><Icon name="pin" size={11} /> Pinned</span>}
                   <span className="rounded-md bg-paper-sunk px-1.5 py-0.5 text-ink-700">{a.consulate || "All embassies"}</span>
                   <span className="ml-auto font-normal text-mute" title={fmtDate(a.createdAt)}>{timeAgo(a.createdAt)}</span>
                 </div>

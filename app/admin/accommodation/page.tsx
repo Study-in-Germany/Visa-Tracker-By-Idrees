@@ -144,8 +144,7 @@ function AccommodationInner() {
     <>
       <PageHeader
         title="Accommodation"
-        description="Rooms and flats posted for students. Add your own, approve new posts, or remove anything that looks wrong."
-        actions={<Link href="/admin/accommodation/new" className="btn-gold w-full sm:w-auto"><Icon name="plus" size={14} /> Add accommodation</Link>}
+        actions={<Link href="/admin/accommodation/new" className="btn-primary w-full sm:w-auto"><Icon name="plus" size={14} /> Add accommodation</Link>}
       />
       <Tabs value={tab} onChange={setTab} reportCount={reports.data?.count ?? 0} />
       {tab === "reports" ? <ReportsTab /> : <ListingsTab key={tab} status={tab} />}

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && tsx scripts/sync-admin.ts && next build",
+    "build": "node scripts/prisma-generate.mjs && tsx scripts/sync-admin.ts && next build",
     "start": "next start",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
@@ -14,6 +14,9 @@
     "sync:admin": "tsx --env-file=.env scripts/sync-admin.ts",
     "seed:demo": "tsx --env-file=.env prisma/seed-demo.ts",
     "test": "tsx --test tests/*.test.ts",
+    "lint": "eslint app components lib",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots",
     "import:universities": "tsx --env-file=.env scripts/import-universities.ts",
     "seed:accommodation": "tsx --env-file=.env scripts/seed-accommodation.ts"
   },
@@ -21,6 +24,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "@prisma/client": "^5.20.0",
     "@tiptap/extension-placeholder": "^3.32.0",
     "@tiptap/pm": "^3.32.0",
@@ -28,10 +32,13 @@
     "@tiptap/starter-kit": "^3.32.0",
     "bcryptjs": "^2.4.3",
     "date-fns": "^3.6.0",
+    "gsap": "^3.15.1",
     "heic-convert": "^2.1.0",
     "jose": "^5.9.3",
+    "lucide-react": "^1.82.0",
     "nanoid": "^5.0.7",
     "next": "14.2.35",
+    "nodemailer": "^10.6.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "read-excel-file": "^9.3.12",
@@ -42,11 +49,15 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.14.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/parser": "^8.74.0",
     "autoprefixer": "^10.4.20",
+    "eslint": "^10.15.0",
     "postcss": "^8.4.47",
     "prisma": "^5.20.0",
     "tailwindcss": "^3.4.13",

@@ -22,10 +22,10 @@ export default function MonthlyArea({ data, series, height = 150 }: { data: Reco
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid stroke="#e3e0d8" strokeDasharray="3 4" vertical={false} />
-          <XAxis dataKey="month" tickFormatter={monthLabel} fontSize={11} tickLine={false} axisLine={false} minTickGap={14} />
-          <YAxis allowDecimals={false} fontSize={11} tickLine={false} axisLine={false} />
-          <Tooltip labelFormatter={(m) => String(m)} contentStyle={{ background: "#fbfaf7", border: "1px solid #e3e0d8", borderRadius: 8, fontSize: 12 }} />
+          <CartesianGrid stroke="rgb(var(--line))" strokeDasharray="3 4" vertical={false} />
+          <XAxis dataKey="month" tickFormatter={monthLabel} fontSize={11} tickLine={false} axisLine={false} minTickGap={14} stroke="rgb(var(--mute))" />
+          <YAxis allowDecimals={false} fontSize={11} tickLine={false} axisLine={false} stroke="rgb(var(--mute))" />
+          <Tooltip labelFormatter={(m) => String(m)} contentStyle={{ background: "rgb(var(--card))", border: "1px solid rgb(var(--line))", borderRadius: 8, fontSize: 12, color: "rgb(var(--ink-900))" }} />
           {series.map((s) => (
             <Area key={s.key} type="monotone" dataKey={s.key} name={s.label} stroke={s.color} strokeWidth={2} fill={`url(#fill-${s.key})`} dot={false} />
           ))}

@@ -1,41 +1,48 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getApplicantSession } from "@/lib/auth";
+import { requireApplicant } from "@/lib/auth/authorization";
 import { updateApplicantSchema } from "@/lib/validations";
+import { invalidateForecastCache } from "@/lib/forecasting/forecast-service";
+import { privateJson } from "@/lib/security/cache-policy";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await getApplicantSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApplicant();
+  if (!auth.ok) return auth.response;
 
   const applicant = await prisma.applicant.findUnique({
-    where: { id: session.applicantId },
+    where: { id: auth.session.applicantId },
     include: { history: { orderBy: { occurredAt: "asc" } } },
   });
-  if (!applicant) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!applicant) return privateJson({ error: "Not found" }, { status: 404 });
 
-  const { accessCodeHash, ...safe } = applicant;
-  return NextResponse.json({ applicant: safe });
+  const { accessCodeHash, unsubscribeToken, sessionVersion: _sv, disabledAt: _da, ...safe } = applicant;
+  return privateJson({ applicant: safe });
 }
 
 // Applicants can update their own contact/profile info and known dates,
 // but cannot change their approval state or delete their history —
 // only an admin can do that.
 export async function PATCH(req: NextRequest) {
-  const session = await getApplicantSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApplicant();
+  if (!auth.ok) return auth.response;
 
   const body = await req.json().catch(() => null);
-  if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  if (!body) return privateJson({ error: "Invalid JSON" }, { status: 400 });
 
   const parsed = updateApplicantSchema
     .omit({ approval: true, visaStatus: true, statusNote: true, notes: true })
     .safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  if (!parsed.success) return privateJson({ error: parsed.error.flatten() }, { status: 400 });
   const data = parsed.data;
   const dateField = (v?: string | null) => (v === undefined ? undefined : v ? new Date(v) : null);
+  const notifyAnnouncements = typeof body.notifyAnnouncements === "boolean" ? body.notifyAnnouncements : undefined;
+  const notifyStatusUpdates = typeof body.notifyStatusUpdates === "boolean" ? body.notifyStatusUpdates : undefined;
 
   const updated = await prisma.applicant.update({
-    where: { id: session.applicantId },
+    where: { id: auth.session.applicantId },
     data: {
       name: data.name ?? undefined,
       gender: (data.gender as any) ?? undefined,
@@ -49,6 +56,8 @@ export async function PATCH(req: NextRequest) {
       sourceOfInformation: data.sourceOfInformation ?? undefined,
       additionalDocuments: data.additionalDocuments ?? undefined,
       isAnonymous: data.isAnonymous ?? undefined,
+      notifyAnnouncements,
+      notifyStatusUpdates,
       waitingListDate: dateField(data.waitingListDate),
       submissionInviteDate: dateField(data.submissionInviteDate),
       documentSubmissionDate: dateField(data.documentSubmissionDate),
@@ -60,6 +69,12 @@ export async function PATCH(req: NextRequest) {
     },
   });
 
-  const { accessCodeHash, ...safe } = updated;
-  return NextResponse.json({ applicant: safe });
+  invalidateForecastCache();
+  revalidatePath("/");
+  revalidatePath("/tracker");
+  revalidatePath("/analytics");
+  revalidatePath(`/tracker/${updated.publicId}`);
+
+  const { accessCodeHash, unsubscribeToken, sessionVersion: _sv, disabledAt: _da, ...safe } = updated;
+  return privateJson({ applicant: safe });
 }

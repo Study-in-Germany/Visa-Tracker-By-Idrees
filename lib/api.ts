@@ -13,7 +13,7 @@ export class ApiError extends Error {
 export async function apiFetch<T = any>(url: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(url, { credentials: "same-origin", ...init });
+    res = await fetch(url, { credentials: "same-origin", cache: "no-store", ...init });
   } catch (e: any) {
     if (e?.name === "AbortError") throw e;
     throw new ApiError("Can't reach the server. Check your connection and try again.", 0);

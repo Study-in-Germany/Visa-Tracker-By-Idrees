@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth/authorization";
 import { updateApplicantSchema } from "@/lib/validations";
-import { sendStatusUpdateEmail } from "@/lib/email";
+import { notifyApplicantApproval, sendStatusUpdateEmail } from "@/lib/email";
+import { invalidateForecastCache } from "@/lib/forecasting/forecast-service";
+import { privateJson } from "@/lib/security/cache-policy";
+
+function revalidatePublicViews(publicId?: string | null) {
+  invalidateForecastCache();
+  revalidatePath("/");
+  revalidatePath("/tracker");
+  revalidatePath("/analytics");
+  revalidatePath("/about");
+  revalidatePath("/admin");
+  revalidatePath("/admin/applicants");
+  if (publicId) revalidatePath(`/tracker/${publicId}`);
+}
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
@@ -20,7 +35,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 
   if (!session) {
-    const { name, email, notes, accessCodeHash, ...rest } = applicant;
+    const { name, email, notes, accessCodeHash, unsubscribeToken, sessionVersion: _sv, disabledAt: _da, ...rest } = applicant;
     return NextResponse.json({
       applicant: {
         ...rest,
@@ -29,12 +44,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     });
   }
 
-  return NextResponse.json({ applicant });
+  const { accessCodeHash, unsubscribeToken, sessionVersion: _sv, disabledAt: _da, ...safe } = applicant;
+  return privateJson({ applicant: safe });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
 
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
@@ -49,6 +65,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const statusChanged = data.visaStatus && data.visaStatus !== existing.visaStatus;
+  const approvalChanged =
+    data.approval &&
+    data.approval !== existing.approval &&
+    (data.approval === "APPROVED" || data.approval === "REJECTED");
   const dateField = (v?: string | null) => (v === undefined ? undefined : v ? new Date(v) : null);
 
   const updated = await prisma.applicant.update({
@@ -86,22 +106,40 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     },
   });
 
-  if (statusChanged) {
-    await sendStatusUpdateEmail({
-      to: existing.email,
-      name: existing.name,
-      visaStatus: updated.visaStatus,
-      note: data.statusNote,
+  if (approvalChanged && updated.email) {
+    await notifyApplicantApproval({
+      id: updated.id,
+      publicId: updated.publicId,
+      name: updated.name,
+      email: updated.email,
+      approval: updated.approval as "APPROVED" | "REJECTED",
     });
   }
 
-  return NextResponse.json({ applicant: updated });
+  if (statusChanged) {
+    await sendStatusUpdateEmail({
+      applicantId: updated.id,
+      publicId: updated.publicId,
+      to: updated.email,
+      name: updated.name,
+      visaStatus: updated.visaStatus,
+      note: data.statusNote,
+      notifyStatusUpdates: updated.notifyStatusUpdates,
+      unsubscribeToken: updated.unsubscribeToken,
+    });
+  }
+
+  revalidatePublicViews(updated.publicId);
+
+  const { accessCodeHash, unsubscribeToken, sessionVersion: _sv, disabledAt: _da, ...safe } = updated;
+  return NextResponse.json({ applicant: safe });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
 
-  await prisma.applicant.delete({ where: { id: params.id } });
+  const deleted = await prisma.applicant.delete({ where: { id: params.id }, select: { publicId: true } });
+  revalidatePublicViews(deleted.publicId);
   return NextResponse.json({ ok: true });
 }

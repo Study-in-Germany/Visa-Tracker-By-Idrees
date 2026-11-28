@@ -83,3 +83,8 @@ data/
 /.csv
 /rektorenliste.pdf
 /pressestellen.pdf
+
+# Unrelated local directories and test outputs
+Valley/
+test-results/
+playwright-report/

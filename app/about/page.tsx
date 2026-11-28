@@ -40,15 +40,15 @@ export default async function AboutPage() {
 
   return (
     <>
-      <PageHeader title={`About ${SITE_NAME}`} description="A community-run tracker for the German national student visa in Pakistan." />
+      <PageHeader title={`About ${SITE_NAME}`} />
 
       {/* Mission */}
       <section className="card mb-3 flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-        <LogoMark size={56} className="shrink-0" />
+        <LogoMark size={52} className="shrink-0" />
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold leading-snug">Real timelines from real applicants, instead of rumours.</h2>
-          <p className="mt-1 max-w-3xl text-[13px] text-ink-700">
-            Waiting for a visa appointment is mostly guesswork. {SITE_NAME} puts applicant-reported journeys side by side so everyone can see how long each stage is actually taking, at each embassy, right now.
+          <h2 className="text-base font-semibold leading-snug text-ink-900">Community-tracked timelines for the German student visa in Pakistan</h2>
+          <p className="mt-1 max-w-3xl text-[13px] text-ink-600">
+            {SITE_NAME} puts applicant-reported journeys side by side so everyone can inspect stage durations and outcomes by embassy.
           </p>
         </div>
         <Link href="/analytics" className="btn-primary shrink-0 sm:ml-auto">See the numbers</Link>
@@ -68,7 +68,7 @@ export default async function AboutPage() {
         <ol className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {STEPS.map((s, i) => (
             <li key={s.title} className="relative flex gap-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-clay-50 text-clay-500">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-paper-sunk text-ink-700">
                 <Icon name={s.icon} size={17} />
               </span>
               <div className="min-w-0">
@@ -110,14 +110,14 @@ export default async function AboutPage() {
         <Panel title="Be part of it">
           <p className="text-[13px] text-ink-700">The more journeys are shared, the more accurate the estimates get. Adding yours takes about two minutes.</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link href="/submit" className="btn-gold"><Icon name="plus" size={14} /> Submit your journey</Link>
+            <Link href="/submit" className="btn-primary"><Icon name="plus" size={14} /> Submit your journey</Link>
             <a href={COMMUNITY_LINKS.whatsappCommunity} target="_blank" rel="noopener noreferrer" className="btn-secondary">
               WhatsApp community <Icon name="external" size={12} />
             </a>
           </div>
         </Panel>
-        <section className="card border-ochre-500/30 bg-ochre-50/60 p-4">
-          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ochre-700">
+        <section className="card border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/30 dark:bg-amber-950/30">
+          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300">
             <Icon name="alert" size={13} /> Disclaimer
           </h2>
           <p className="mt-2 text-[13px] text-ink-700">

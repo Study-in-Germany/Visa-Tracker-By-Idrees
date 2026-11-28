@@ -147,7 +147,7 @@ export default function ImportsPage() {
 
   return (
     <>
-      <PageHeader title="Update data" description="Keep the universities and programmes lists complete and correct. Nothing here changes applicants or listings." />
+      <PageHeader title="Update data" />
       {(startError || runError) && <div className="mb-3"><Notice tone="error">{startError || runError}</Notice></div>}
 
       {busy && (

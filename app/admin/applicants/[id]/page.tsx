@@ -10,8 +10,11 @@ import Select from "@/components/ui/Select";
 import DatePicker from "@/components/ui/DatePicker";
 import Checkbox from "@/components/ui/Checkbox";
 import Icon from "@/components/ui/Icon";
-import { ErrorState, LoadingBlock, Notice } from "@/components/ui/States";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { DetailPageSkeleton } from "@/components/ui/Skeletons";
+import { ErrorState, Notice } from "@/components/ui/States";
 import StatusBadge from "@/components/StatusBadge";
+import { invalidateApi } from "@/hooks/useApi";
 import { apiFetch, jsonInit } from "@/lib/api";
 import { fmtDate, toInputDate } from "@/lib/format";
 import { JOURNEY_STAGES } from "@/lib/constants";
@@ -33,6 +36,8 @@ export default function AdminApplicantEditPage() {
   const [statusNote, setStatusNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
@@ -62,6 +67,10 @@ export default function AdminApplicantEditPage() {
     setError("");
     try {
       await apiFetch(`/api/applicants/${id}`, jsonInit("PATCH", { ...form, gender: form.gender || null, statusNote: statusNote || undefined }));
+      invalidateApi("/api/applicants");
+      invalidateApi("/api/stats");
+      invalidateApi("/api/analytics");
+      invalidateApi("/api/admin");
       setSaved(true);
       setStatusNote("");
       load();
@@ -73,17 +82,23 @@ export default function AdminApplicantEditPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this applicant record permanently? This cannot be undone.")) return;
+    setDeleting(true);
     try {
       await apiFetch(`/api/applicants/${id}`, { method: "DELETE" });
+      invalidateApi("/api/applicants");
+      invalidateApi("/api/stats");
+      invalidateApi("/api/analytics");
+      invalidateApi("/api/admin");
+      setConfirmDelete(false);
       router.push("/admin/applicants");
     } catch (err: any) {
       setError(err.message);
+      setDeleting(false);
     }
   }
 
   if (error && !form) return <div className="card"><ErrorState error={error} onRetry={load} /></div>;
-  if (!applicant || !form) return <LoadingBlock />;
+  if (!applicant || !form) return <DetailPageSkeleton />;
 
   return (
     <>
@@ -149,12 +164,23 @@ export default function AdminApplicantEditPage() {
         </Panel>
 
         <div className="sticky bottom-0 z-10 -mx-3 flex flex-wrap items-center gap-3 border-t border-line bg-paper/95 px-3 py-3 backdrop-blur sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6">
-          <button className="btn-gold" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
+          <button className="btn-primary" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
           {saved && <Notice tone="success">Saved.</Notice>}
           {error && <Notice tone="error">{error}</Notice>}
-          <button type="button" onClick={handleDelete} className="ml-auto text-xs font-medium text-red-700 hover:underline">Delete record</button>
+          <button type="button" onClick={() => setConfirmDelete(true)} className="ml-auto text-xs font-medium text-red-600 hover:underline dark:text-red-400">Delete record</button>
         </div>
       </form>
+
+      <ConfirmationModal
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+        title="Delete applicant"
+        message={`Delete ${applicant.publicId} permanently? This action cannot be undone.`}
+        confirmText="Delete record"
+        variant="danger"
+        isLoading={deleting}
+      />
 
       {applicant.history?.length > 0 && (
         <Panel title="Status history" className="mt-3">

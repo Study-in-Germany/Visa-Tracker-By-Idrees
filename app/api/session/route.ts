@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
-import { getActor } from "@/lib/permissions";
+import { getSessionInfo } from "@/lib/session-profile";
+import { privateJson } from "@/lib/security/cache-policy";
 
-// GET /api/session — who is signed in, so pages can show the right actions. Contains no personal data.
+export const dynamic = "force-dynamic";
+
+// GET /api/session — current viewer role + header/sidebar profile summary.
 export async function GET() {
-  const actor = await getActor();
-  return NextResponse.json({ role: actor.role, ...(actor.role === "applicant" ? { publicId: actor.publicId } : {}), ...(actor.role === "admin" ? { email: actor.email } : {}) }, { headers: { "Cache-Control": "no-store" } });
+  const info = await getSessionInfo();
+  return privateJson(info);
 }

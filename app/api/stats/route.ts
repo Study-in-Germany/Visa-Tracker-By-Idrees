@@ -2,18 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { waitingListWhere } from "@/lib/period";
 import { ACTIVE_STATUSES, CONSULATES } from "@/lib/constants";
+import { TEAM_PUBLIC_ID } from "@/lib/listings";
+
+export const dynamic = "force-dynamic";
 
 // GET /api/stats?from=&to=&consulate=
-// Lightweight headline numbers for the tracker: one grouped COUNT, no rows transferred.
+// Lightweight headline numbers for My Journey: one grouped COUNT, no rows transferred.
 export async function GET(req: NextRequest) {
   const sp = new URL(req.url).searchParams;
   const consulate = sp.get("consulate") || undefined;
-  if (consulate && !CONSULATES.includes(consulate)) return NextResponse.json({ error: "Invalid consulate filter" }, { status: 400 });
+  if (consulate && !CONSULATES.includes(consulate)) {
+    return NextResponse.json({ error: "Invalid consulate filter" }, { status: 400 });
+  }
   const waitingListDate = waitingListWhere(sp.get("from"), sp.get("to"));
 
   const groups = await prisma.applicant.groupBy({
     by: ["visaStatus"],
-    where: { approval: "APPROVED", ...(consulate ? { consulate } : {}), ...(waitingListDate ? { waitingListDate } : {}) },
+    where: {
+      approval: "APPROVED",
+      publicId: { not: TEAM_PUBLIC_ID },
+      ...(consulate ? { consulate } : {}),
+      ...(waitingListDate ? { waitingListDate } : {}),
+    },
     _count: { _all: true },
   });
 
@@ -25,6 +35,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(
     { total, activeApplicants, visaIssued: byStatus.VISA_ISSUED || 0, visaRejected: byStatus.VISA_REJECTED || 0, byStatus },
-    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } },
+    { headers: { "Cache-Control": "no-store" } }
   );
 }

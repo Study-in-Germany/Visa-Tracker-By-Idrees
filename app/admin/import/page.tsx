@@ -54,7 +54,7 @@ export default function AdminImportPage() {
 
   return (
     <>
-      <PageHeader title="Import applicants" description="Add many applicants at once from a spreadsheet instead of typing them one by one." />
+      <PageHeader title="Import applicants" />
 
       <div className="grid items-start gap-5 xl:grid-cols-5">
         <Section className="xl:col-span-3" title="Three easy steps">

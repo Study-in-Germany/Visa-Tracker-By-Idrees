@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { waitingListWhere } from "@/lib/period";
 import { ACTIVE_STATUSES } from "@/lib/constants";
+import { TEAM_PUBLIC_ID } from "@/lib/listings";
 
 function daysBetween(a: Date | null, b: Date | null) {
   if (!a || !b) return null;
@@ -26,6 +27,7 @@ export async function GET(req: NextRequest) {
   const applicants = await prisma.applicant.findMany({
     where: {
       approval: "APPROVED",
+      publicId: { not: TEAM_PUBLIC_ID },
       ...(consulate ? { consulate } : {}),
       ...(waitingListDate ? { waitingListDate } : {}),
     },
@@ -37,6 +39,7 @@ export async function GET(req: NextRequest) {
       submissionInviteDate: true,
       documentSubmissionDate: true,
       appointmentDate: true,
+      interviewDate: true,
       decisionDate: true,
     },
   });
@@ -66,6 +69,12 @@ export async function GET(req: NextRequest) {
     .slice(0, 12)
     .map(([university, count]) => ({ university, count }));
 
+  const decisionDays = (a: (typeof applicants)[number]) => {
+    if (a.visaStatus !== "VISA_ISSUED" && a.visaStatus !== "VISA_REJECTED") return null;
+    const d = daysBetween(a.interviewDate ?? a.appointmentDate, a.decisionDate);
+    return d !== null && d >= 0 && d <= 365 ? d : null;
+  };
+
   // Consulate breakdown + comparison
   const byConsulate: Record<string, typeof applicants> = {};
   for (const a of applicants) {
@@ -73,9 +82,9 @@ export async function GET(req: NextRequest) {
     byConsulate[a.consulate].push(a);
   }
   const consulateComparison = Object.entries(byConsulate).map(([consulate, list]) => {
-    const wToS = list.map((a) => daysBetween(a.waitingListDate, a.submissionInviteDate)).filter((d): d is number => d !== null);
-    const sToA = list.map((a) => daysBetween(a.documentSubmissionDate, a.appointmentDate)).filter((d): d is number => d !== null);
-    const aToD = list.map((a) => daysBetween(a.appointmentDate, a.decisionDate)).filter((d): d is number => d !== null);
+    const wToS = list.map((a) => daysBetween(a.waitingListDate, a.submissionInviteDate)).filter((d): d is number => d !== null && d >= 0 && d <= 730);
+    const sToA = list.map((a) => daysBetween(a.documentSubmissionDate, a.appointmentDate)).filter((d): d is number => d !== null && d >= 0 && d <= 365);
+    const aToD = list.map((a) => decisionDays(a)).filter((d): d is number => d !== null);
     return {
       consulate,
       total: list.length,
@@ -90,12 +99,12 @@ export async function GET(req: NextRequest) {
   // Processing analytics (overall)
   const waitingToSubmission = applicants
     .map((a) => daysBetween(a.waitingListDate, a.submissionInviteDate))
-    .filter((d): d is number => d !== null);
+    .filter((d): d is number => d !== null && d >= 0 && d <= 730);
   const submissionToAppointment = applicants
     .map((a) => daysBetween(a.documentSubmissionDate, a.appointmentDate))
-    .filter((d): d is number => d !== null);
+    .filter((d): d is number => d !== null && d >= 0 && d <= 365);
   const appointmentToDecision = applicants
-    .map((a) => daysBetween(a.appointmentDate, a.decisionDate))
+    .map((a) => decisionDays(a))
     .filter((d): d is number => d !== null);
 
   // Monthly volume (by waiting-list join month) + monthly outcomes

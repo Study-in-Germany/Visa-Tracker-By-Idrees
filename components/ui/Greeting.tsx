@@ -23,14 +23,14 @@ export default function Greeting({ name, subtitle, actions }: { name: string; su
     return () => clearInterval(t);
   }, []);
   const p = part(now);
-  const pill = "inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-2.5 py-1 text-[12px] font-medium text-ink-700 shadow-[0_1px_2px_rgba(35,47,39,0.04)]";
+  const pill = "inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-2.5 py-1 text-[12px] font-medium text-ink-700";
   return (
     <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-clay-500" aria-hidden="true">{GLYPH[p]}</svg>
+        <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-amber-500" aria-hidden="true">{GLYPH[p]}</svg>
           <span className="min-w-0 truncate"><span className="font-normal text-ink-600">Good {p}, </span>{name}</span>
-        </h1>
+        </h2>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className={pill}><Icon name="calendar" size={13} className="text-mute" />{now.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</span>
           <span className={`${pill} tabular-nums`}><Icon name="clock" size={13} className="text-mute" />{now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</span>

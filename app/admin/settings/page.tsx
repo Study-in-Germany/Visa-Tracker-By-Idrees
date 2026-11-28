@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Field from "@/components/ui/Field";
 import Icon, { IconName } from "@/components/ui/Icon";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import ActiveSessionsPanel from "@/components/auth/ActiveSessionsPanel";
 import { Notice } from "@/components/ui/States";
 import PasswordInput from "@/components/PasswordInput";
 import { Section } from "@/components/admin/parts";
-import { invalidateApi } from "@/hooks/useApi";
 import { useSession } from "@/hooks/useSession";
 import { useTheme } from "@/hooks/useTheme";
 import { apiFetch, jsonInit } from "@/lib/api";
@@ -96,22 +96,30 @@ function Link2({ href, icon, title, desc }: { href: string; icon: IconName; titl
 }
 
 export default function AdminSettingsPage() {
-  const router = useRouter();
-  const { email } = useSession();
+  const { email, logout } = useSession();
   const { theme, setTheme } = useTheme();
   const [out, setOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
 
   async function signOut() {
     setOut(true);
-    await fetch("/api/admin/logout", { method: "POST" }).catch(() => {});
-    invalidateApi();
-    router.push("/admin/login");
-    router.refresh();
+    setLogoutError(null);
+    try {
+      const result = await logout({ asAdmin: true, redirectTo: "/admin/login" });
+      if (!result.ok) {
+        setLogoutError(result.error || "Could not revoke your administrator session. Please retry.");
+        return;
+      }
+      setShowSignOutModal(false);
+    } finally {
+      setOut(false);
+    }
   }
 
   return (
     <>
-      <PageHeader title="Settings" description="Your admin account, security and how the dashboard looks." />
+      <PageHeader title="Settings" />
 
       <div className="grid gap-5 xl:grid-cols-3">
         <div className="space-y-5 xl:col-span-2">
@@ -122,11 +130,33 @@ export default function AdminSettingsPage() {
                 <p className="truncate text-[15px] font-semibold">{email || "Administrator"}</p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-xs text-mute"><Icon name="shield" size={12} /> Administrator · full access</p>
               </div>
-              <button type="button" className="btn-secondary" onClick={signOut} disabled={out}><Icon name="logout" size={14} /> {out ? "Signing out…" : "Sign out"}</button>
+              <button type="button" className="btn-secondary" onClick={() => setShowSignOutModal(true)} disabled={out}><Icon name="logout" size={14} /> {out ? "Signing out…" : "Sign out"}</button>
             </div>
           </Section>
 
+          <ConfirmationModal
+            isOpen={showSignOutModal}
+            onClose={() => {
+              if (out) return;
+              setShowSignOutModal(false);
+              setLogoutError(null);
+            }}
+            onConfirm={signOut}
+            title="Log out?"
+            message="Are you sure you want to log out of your administrator account?"
+            confirmText={logoutError ? "Retry log out" : "Log out"}
+            cancelText="Cancel"
+            variant="danger"
+            icon="logout"
+            isLoading={out}
+            error={logoutError}
+          />
+
           <PasswordCard email={email} />
+
+          <Section title="Active administrator sessions" hint="Sessions expire after 30 minutes of inactivity or 12 hours maximum.">
+            <ActiveSessionsPanel endpoint="/api/admin/sessions" />
+          </Section>
         </div>
 
         <div className="space-y-5">
@@ -150,7 +180,7 @@ export default function AdminSettingsPage() {
 
           <Section title="Security notes">
             <ul className="space-y-2 text-xs leading-relaxed text-mute">
-              <li className="flex gap-2"><Icon name="check" size={13} className="mt-0.5 shrink-0 text-green-600" /> Sessions last 30 days on a device, then ask you to sign in again.</li>
+              <li className="flex gap-2"><Icon name="check" size={13} className="mt-0.5 shrink-0 text-green-600" /> Admin sessions require MFA and expire after 30 minutes idle or 12 hours max.</li>
               <li className="flex gap-2"><Icon name="check" size={13} className="mt-0.5 shrink-0 text-green-600" /> Applicants can never open admin pages, even when signed in.</li>
               <li className="flex gap-2"><Icon name="alert" size={13} className="mt-0.5 shrink-0 text-amber-600" /> Sign out on shared computers.</li>
             </ul>
